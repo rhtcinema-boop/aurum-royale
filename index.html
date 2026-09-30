@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AURUM ROYALE">
+<meta name="theme-color" content="#050506">
+<meta name="format-detection" content="telephone=no">
+<title>AURUM ROYALE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage" data-stage="1">
+    <div class="bg bg1"></div><div class="bg bg2"></div><div class="bg bg3"></div>
+    <div class="lattice"></div>
+    <div class="rays"></div>
+    <div class="vignette"></div>
+
+    <div id="content">
+      <div class="spot"></div>
+
+      <header class="marquee">
+        <span class="rule"></span>
+        <h1 class="gold-text">AURUM ROYALE</h1>
+        <span class="rule r"></span>
+      </header>
+
+      <!-- 長押しでPIN入力（設定画面への隠し入口） -->
+      <div id="crest"><div class="crest-gem"></div></div>
+
+      <div class="ladder" id="ladder">
+        <div class="rung" data-s="3"><small>STAGE</small><b>3</b><em>FINAL</em></div>
+        <div class="rail"><i></i><i></i><i></i></div>
+        <div class="rung" data-s="2"><small>STAGE</small><b>2</b></div>
+        <div class="rail"><i></i><i></i><i></i></div>
+        <div class="rung" data-s="1"><small>STAGE</small><b>1</b></div>
+      </div>
+
+      <div class="cabinet" id="cabinet">
+        <div class="frame"></div>
+        <div class="bulbs" id="bulbs"></div>
+        <div class="window" id="window">
+          <canvas id="reel"></canvas>
+          <div class="payglow"></div>
+          <div class="shade"></div>
+          <div class="glass"></div>
+        </div>
+        <div class="pointer l"></div><div class="pointer r"></div>
+      </div>
+
+      <div class="plate" id="plate">
+        <div class="plate-main" id="plateMain"></div>
+        <div class="plate-sub" id="plateSub"></div>
+      </div>
+
+      <div class="lever" id="lever">
+        <div class="lever-cap">PULL</div>
+        <div class="lever-track">
+          <div class="lever-glow" id="leverGlow"></div>
+          <div class="lever-arrows"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="lever-knob" id="leverKnob"><div class="knob-collar"></div><div class="knob-ball"></div></div>
+        <div class="lever-led" id="leverLed">READY</div>
+      </div>
+
+      <div id="dim"></div>
+
+      <div class="banner" id="banner">
+        <div class="banner-rays"></div>
+        <div class="banner-label" id="bannerLabel"></div>
+        <div class="banner-value" id="bannerValue"></div>
+      </div>
+
+      <canvas id="fx"></canvas>
+
+      <div class="lockbar" id="lockbar"></div>
+    </div>
+
+    <div id="flash"></div>
+    <div class="shutter top"><div class="shutter-edge"></div></div>
+    <div class="shutter bottom"><div class="shutter-edge"></div></div>
+    <div class="shutter-label" id="shutterLabel"><small>STAGE</small><b>2</b></div>
+
+    <div id="ui"></div>
+    <div id="toast"></div>
+    <!-- 最初のタップで音声を有効化する（ブラウザ/OSの自動再生制限への対応） -->
+    <div id="splash"><div class="splash-in"><div class="crest-gem"></div><h1 class="gold-text">AURUM ROYALE</h1><p>TAP TO START</p></div></div>
+  </div>
+  <div id="rotate"><div>端末を横向きにしてご利用ください</div></div>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/store.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/reel.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
