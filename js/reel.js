@@ -11,6 +11,18 @@ const Reel = (function () {
     2: [1000, 'NEXT', 0, 3000, 2000, 5000],
     3: [10000, 100000, 0, 50000],
   };
+  /* ステージ別の回転設定（ここを変えると止まるまでの時間を調整できる）
+       speed  : 最高速（1秒あたりのコマ数）
+       cruise : 最高速で回り続ける秒数 [最短, 最長]
+       decel  : 減速にかける秒数
+       pause  : 停止直前に「止まりかけ」で粘る秒数
+       tease  : 「止まりかけ → もう1コマ進む」演出が出る割合（0〜1）
+     停止までの目安: STAGE 1 約4秒 / STAGE 2 約6.5秒 / STAGE 3 約9.5秒 */
+  const TIMING = {
+    1: { speed: 30, cruise: [0.5, 0.8], decel: 2.1, pause: 0.35, tease: 0.5 },
+    2: { speed: 32, cruise: [1.0, 1.4], decel: 3.3, pause: 0.75, tease: 0.85 },
+    3: { speed: 34, cruise: [1.6, 2.1], decel: 4.6, pause: 1.3, tease: 1 },
+  };
   const NUM_FONT = '"Bodoni 72","Bodoni 72 Oldstyle","Didot","Bodoni MT","Times New Roman",serif';
   const LBL_FONT = '"Copperplate","Copperplate Gothic Bold","Cinzel","Trajan Pro","Times New Roman",serif';
   const PAL = {
@@ -150,8 +162,9 @@ const Reel = (function () {
   const seg = (d, v0, v1, k) => ({ d, v0, v1, k });
 
   function buildProfile(p0, st, sym) {
-    const V = [0, 30, 32, 34][st];
-    const tease = Math.random() < [0, 0.6, 0.85, 1][st];
+    const cfg = TIMING[st];
+    const V = cfg.speed;
+    const tease = Math.random() < cfg.tease;
     const TW = 0.2, AW = 0.11;                 // 始動時の「溜め」（わずかに逆方向へ引く）
     const vW = (AW * Math.PI) / TW;
     const vL = 1.15;                           // デテントに落ちる瞬間の速度
@@ -160,7 +173,7 @@ const Reel = (function () {
     let teaseAt = -1;
     if (tease) {
       const vP = 0.2, vPk = 1.55;
-      const decT = [0, 2.7, 3.0, 3.5][st], pauseT = [0, 0.45, 0.6, 0.85][st];
+      const decT = cfg.decel, pauseT = cfg.pause;
       const X = seg(decT, V, vP, 2.2);
       const P = seg(pauseT, vP, vP);
       // 手前の絵柄の中心 -0.05 セルで止まりかけ、そこから残り 1.05 セルを倒れ込む
@@ -169,11 +182,11 @@ const Reel = (function () {
       const sc = need / nat;
       tail.push(X, P, seg(0.55 * sc, vP, vPk), seg(0.34 * sc, vPk, vL));
     } else {
-      tail.push(seg([0, 2.5, 2.8, 3.2][st], V, vL + 0.5, 2.0), seg(0.45, vL + 0.5, vL));
+      tail.push(seg(cfg.decel + cfg.pause, V, vL + 0.5, 2.0), seg(0.45, vL + 0.5, vL));
     }
     let fixed = segDist(accel, 1);
     tail.forEach((s) => (fixed += segDist(s, 1)));
-    const minCruise = 0.85 + Math.random() * 0.5;
+    const minCruise = cfg.cruise[0] + Math.random() * (cfg.cruise[1] - cfg.cruise[0]);
     const n = STRIPS[st].length;
     let T = Math.ceil(p0 + fixed + V * minCruise);
     while (STRIPS[st][mod(T, n)] !== sym) T++;
