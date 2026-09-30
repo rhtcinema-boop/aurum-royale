@@ -13,6 +13,6 @@ http.createServer((req, res) => {
     res.end(data);
   });
 }).listen(port, () => {
-  console.log('AURUM ROYALE: http://localhost:' + port);
+  console.log('casa SLOT: http://localhost:' + port);
   Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).forEach((i) => console.log('  LAN: http://' + i.address + ':' + port));
 });
