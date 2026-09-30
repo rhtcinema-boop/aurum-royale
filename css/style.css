@@ -1,4 +1,4 @@
-/* AURUM ROYALE — 設計座標 1600x900（16:9）。#stage を JS で画面に合わせて拡縮する。 */
+/* casa SLOT — 設計座標 1600x900（16:9）。#stage を JS で画面に合わせて拡縮する。 */
 :root {
   --font-label: "Copperplate", "Copperplate Gothic Bold", "Cinzel", "Trajan Pro", "Times New Roman", serif;
   --font-num: "Bodoni 72", "Didot", "Bodoni MT", "Times New Roman", serif;
@@ -56,21 +56,20 @@ html, body {
 
 /* ---------- ヘッダー ---------- */
 .marquee { position: absolute; left: 350px; top: 34px; width: 840px; height: 76px; display: flex; align-items: center; justify-content: center; gap: 26px; }
-.marquee h1 { margin: 0; font: 700 54px/1 var(--font-label); letter-spacing: .2em; white-space: nowrap; padding-left: .2em; }
+.marquee h1 { margin: 0; font-size: 62px; line-height: 1; white-space: nowrap; }
 .marquee .rule { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, var(--accent)); position: relative; }
 .marquee .rule.r { background: linear-gradient(270deg, transparent, var(--accent)); }
 .marquee .rule::after { content: ""; position: absolute; right: -5px; top: -5px; width: 12px; height: 12px; background: var(--accent); transform: rotate(45deg); box-shadow: 0 0 12px var(--glow); }
 .marquee .rule.r::after { right: auto; left: -5px; }
 
-#crest { position: absolute; left: 48px; top: 22px; width: 110px; height: 110px; display: grid; place-items: center; }
-.crest-gem {
-  width: 54px; height: 54px; transform: rotate(45deg); border-radius: 8px;
-  background: linear-gradient(135deg, #fff6cf 0%, #d9a73a 30%, #6d4a12 55%, #e9c25e 78%, #8a6118 100%);
-  box-shadow: 0 0 0 3px #1a1206, 0 0 0 5px var(--accent-dim), 0 10px 24px rgba(0, 0, 0, .7), inset 0 2px 2px rgba(255, 255, 255, .7);
-  position: relative; transition: transform .25s var(--ease-out);
-}
-.crest-gem::after { content: ""; position: absolute; inset: 12px; border-radius: 4px; background: linear-gradient(135deg, #1c1c21, #070708); box-shadow: inset 0 0 0 2px var(--accent-dim); }
-#crest.holding .crest-gem { transform: rotate(45deg) scale(.9); }
+#crest { position: absolute; left: 44px; top: 14px; width: 124px; height: 124px; display: grid; place-items: center; }
+/* casa ロゴ: 白い線画だけを切り出した透過PNGをマスクとして使う */
+.logo-emblem { width: 96px; height: 110px; background: #fff; -webkit-mask: url(../logo-emblem.png) center / contain no-repeat; mask: url(../logo-emblem.png) center / contain no-repeat; transition: transform .25s var(--ease-out); }
+#crest { filter: drop-shadow(0 0 10px rgba(255, 255, 255, .25)) drop-shadow(0 6px 10px rgba(0, 0, 0, .8)); }
+#crest.holding .logo-emblem { transform: scale(.9); }
+.logo-word { display: inline-block; width: 4.1em; height: 1em; background: #fff; -webkit-mask: url(../logo-casa.png) center / contain no-repeat; mask: url(../logo-casa.png) center / contain no-repeat; }
+.brand { display: flex; align-items: center; gap: .38em; filter: drop-shadow(0 0 14px rgba(255, 255, 255, .22)) drop-shadow(0 6px 10px rgba(0, 0, 0, .8)); }
+.brand b { font-family: var(--font-label); font-weight: 700; font-size: .8em; letter-spacing: .22em; line-height: 1; padding-top: .12em; }
 
 /* ---------- ステージ表示（ラダー） ---------- */
 .ladder { position: absolute; left: 70px; top: 176px; width: 220px; }
@@ -187,10 +186,10 @@ html, body {
 .lever.ready .lever-led { color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent-dim), inset 0 4px 10px #000, 0 0 24px var(--glow); }
 
 /* ---------- 演出レイヤー ---------- */
-#fx { position: absolute; left: 0; top: -150px; width: 1600px; height: 1200px; pointer-events: none; }
+#fx { z-index: 3; position: absolute; left: 0; top: -150px; width: 1600px; height: 1200px; pointer-events: none; }
 #dim { position: absolute; left: -100px; right: -100px; top: -200px; bottom: -200px; pointer-events: none; opacity: 0; transition: opacity .5s ease; background: radial-gradient(circle at 870px 620px, transparent 0, transparent 230px, rgba(0, 0, 0, .86) 560px); }
 #dim.on { opacity: 1; }
-#flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 48% 47%, #fff 0%, #fff3c8 30%, rgba(255, 215, 120, .7) 60%, rgba(255, 215, 120, 0) 100%); }
+#flash { z-index: 3; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 48% 47%, #fff 0%, #fff3c8 30%, rgba(255, 215, 120, .7) 60%, rgba(255, 215, 120, 0) 100%); }
 #flash.go { animation: flash .7s ease-out; }
 #flash.go-soft { animation: flash-soft .6s ease-out; }
 @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -254,7 +253,7 @@ html, body {
 .btn.sm { min-height: 52px; padding: 0 22px; font-size: 18px; }
 .btn:disabled { filter: grayscale(.9) brightness(.5); pointer-events: none; }
 
-#ui { position: absolute; inset: 0; pointer-events: none; }
+#ui { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 #ui > * { pointer-events: auto; }
 .scrim { position: absolute; inset: 0; background: rgba(3, 3, 4, .88); display: grid; place-items: center; animation: fade .25s ease both; }
 .scrim.solid { background: radial-gradient(ellipse at 50% 40%, #1f1f24, #060607 75%); }
@@ -350,9 +349,8 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 #splash { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 45%, rgba(34, 34, 40, .94), rgba(3, 3, 4, .98) 70%); transition: opacity .5s ease; }
 #splash.bye { opacity: 0; pointer-events: none; }
 .splash-in { display: flex; flex-direction: column; align-items: center; gap: 44px; }
-.splash-in .crest-gem { width: 110px; height: 110px; border-radius: 14px; }
-.splash-in .crest-gem::after { inset: 24px; border-radius: 8px; }
-.splash-in h1 { margin: 0; font: 700 92px/1 var(--font-label); letter-spacing: .2em; padding-left: .2em; }
+.splash-in .logo-emblem { width: 236px; height: 270px; filter: drop-shadow(0 0 24px rgba(255, 255, 255, .3)); }
+.splash-in h1 { margin: 0; font-size: 120px; line-height: 1; }
 .splash-in p { margin: 0; font: 700 30px/1 var(--font-label); letter-spacing: .5em; padding-left: .5em; color: #e9c25e; animation: invite 1.8s ease-in-out infinite; }
 /* ==========================================================
    ステージが上がるごとに全体を派手にする追加レイヤー
@@ -438,6 +436,100 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 #stage[data-win="8"]::after { background: radial-gradient(ellipse at 48% 47%, transparent 26%, rgba(255, 215, 110, .5) 100%); animation-duration: .32s; }
 @keyframes strobe { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
 
+/* ==========================================================
+   ステージ突入の儀式（閉門 → ロック解除 → 刻印 → ドラムロール → 開門）
+   ========================================================== */
+.cabinet.tremble { animation: tremble .08s linear infinite; }
+@keyframes tremble { 0% { transform: translate(2px, -1px); } 25% { transform: translate(-2px, 2px); } 50% { transform: translate(1px, 2px); } 75% { transform: translate(-1px, -2px); } 100% { transform: translate(2px, 1px); } }
+.seam { position: absolute; left: 0; right: 0; top: 50%; height: 10px; margin-top: -5px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, #fff1b8 15%, #fff 50%, #fff1b8 85%, transparent); box-shadow: 0 0 50px 14px rgba(255, 215, 120, .8); }
+#stage.ceremony .seam { opacity: .55; animation: seam-pulse .9s ease-in-out infinite; }
+#stage.rolling .seam { opacity: 1; animation: seam-pulse .16s ease-in-out infinite; height: 16px; margin-top: -8px; }
+#stage.blast .seam { animation: seam-blast .7s ease-out forwards; }
+#stage.fin .seam { box-shadow: 0 0 60px 18px rgba(255, 90, 60, .85); }
+@keyframes seam-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+@keyframes seam-blast { 0% { opacity: 1; transform: scaleY(1); } 40% { opacity: 1; transform: scaleY(70); } 100% { opacity: 0; transform: scaleY(120); } }
+.shutter-rays { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; margin: -850px 0 0 -850px; pointer-events: none; opacity: 0; transition: opacity .5s;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 220, 140, .3) 0deg 6deg, transparent 6deg 18deg);
+  -webkit-mask-image: radial-gradient(circle, #000 10%, transparent 60%); mask-image: radial-gradient(circle, #000 10%, transparent 60%); animation: rotate 12s linear infinite; }
+#stage.named .shutter-rays { opacity: 1; }
+#stage.rolling .shutter-rays { animation-duration: 3s; }
+#stage.fin .shutter-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 110, 80, .34) 0deg 5deg, transparent 5deg 10deg, rgba(255, 230, 160, .3) 10deg 14deg, transparent 14deg 22deg); }
+.shutter-label em { font: 700 34px/1 var(--font-label); font-style: normal; letter-spacing: .36em; padding-left: .36em; margin-top: 8px; color: #fff6d6; text-shadow: 0 0 20px rgba(255, 215, 120, .9); }
+.shutter-label em:empty { display: none; }
+#stage.rolling .shutter-label { animation: label-throb .22s ease-in-out infinite; }
+@keyframes label-throb { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.035); } }
+#stage.fin .shutter-label { box-shadow: 0 0 0 3px #000, 0 0 0 9px #8a6118, 0 0 0 11px #fffdf0, 0 0 0 16px #6d4a12, 0 30px 80px #000, 0 0 160px rgba(255, 80, 50, .6); }
+.bolts { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 232px); display: flex; gap: 34px; pointer-events: none; opacity: 0; transition: opacity .3s; }
+#stage.ceremony .bolts { opacity: 1; }
+.bolts i { width: 34px; height: 34px; border-radius: 50%; background: #121216; box-shadow: inset 0 0 0 3px #6d4a12, inset 0 4px 8px #000; }
+.bolts i.on { background: radial-gradient(circle, #fff 0 20%, #ffd773 50%, #b8862b 100%); box-shadow: 0 0 26px 4px rgba(255, 215, 120, .9), inset 0 0 0 3px #f7e3a1; animation: bolt-on .35s var(--ease-back); }
+#stage.fin .bolts i.on:nth-child(even) { background: radial-gradient(circle, #fff 0 20%, #ff6a55 50%, #8e1d17 100%); box-shadow: 0 0 26px 4px rgba(255, 90, 60, .9), inset 0 0 0 3px #ffb1a3; }
+@keyframes bolt-on { from { transform: scale(2.2); } to { transform: scale(1); } }
+#stage.opening-slow .shutter { transition: transform 1.25s cubic-bezier(.65, 0, .15, 1); }
+.banner.next .banner-label { font-size: 70px; top: -170px; color: #fff; }
+.banner.next.final .banner-label { font-size: 88px; top: -185px; text-shadow: 0 0 34px rgba(255, 220, 140, 1), 0 0 80px rgba(255, 80, 50, .9), 0 4px 0 #2a1a03; }
+
+/* ==========================================================
+   確定演出
+   ========================================================== */
+#blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 2; }
+#blackout.on { opacity: .97; }
+#stage.sure { --rim: 1; --rim-speed: .55s; --rim-color: #ffffff; }
+#stage.sure .frame { box-shadow: 0 34px 80px rgba(0, 0, 0, .85), 0 0 0 2px #241803, inset 0 2px 3px rgba(255, 255, 255, .7), 0 0 90px rgba(255, 255, 255, .55), 0 0 40px rgba(255, 220, 140, .8); }
+#stage.sure .bulbs i { animation-duration: .3s; background: radial-gradient(circle, #fff 0 22%, #fff6cf 40%, rgba(255, 255, 255, .4) 52%, transparent 70%); }
+#stage.sure .knob-ball { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #fff6cf 8%, #f0c04c 28%, #b37a18 60%, #4a2c04 90%); filter: none !important; }
+.plate.sure { box-shadow: inset 0 0 0 3px #fff6cf, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 230, 160, .5), 0 0 60px rgba(255, 230, 160, .6); animation: sure-plate .4s ease-in-out infinite; }
+.plate.sure .plate-sub { color: #fff6d6; font-weight: 700; }
+@keyframes sure-plate { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
 #rotate { position: absolute; inset: 0; display: none; place-items: center; background: #050506; color: #e9c25e; font: 600 20px var(--font-ui); letter-spacing: .1em; text-align: center; }
-@media (orientation: portrait) { #rotate { display: grid; } }
+@media (orientation: portrait) { /* ==========================================================
+   ステージ突入の儀式（閉門 → ロック解除 → 刻印 → ドラムロール → 開門）
+   ========================================================== */
+.cabinet.tremble { animation: tremble .08s linear infinite; }
+@keyframes tremble { 0% { transform: translate(2px, -1px); } 25% { transform: translate(-2px, 2px); } 50% { transform: translate(1px, 2px); } 75% { transform: translate(-1px, -2px); } 100% { transform: translate(2px, 1px); } }
+.seam { position: absolute; left: 0; right: 0; top: 50%; height: 10px; margin-top: -5px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, #fff1b8 15%, #fff 50%, #fff1b8 85%, transparent); box-shadow: 0 0 50px 14px rgba(255, 215, 120, .8); }
+#stage.ceremony .seam { opacity: .55; animation: seam-pulse .9s ease-in-out infinite; }
+#stage.rolling .seam { opacity: 1; animation: seam-pulse .16s ease-in-out infinite; height: 16px; margin-top: -8px; }
+#stage.blast .seam { animation: seam-blast .7s ease-out forwards; }
+#stage.fin .seam { box-shadow: 0 0 60px 18px rgba(255, 90, 60, .85); }
+@keyframes seam-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+@keyframes seam-blast { 0% { opacity: 1; transform: scaleY(1); } 40% { opacity: 1; transform: scaleY(70); } 100% { opacity: 0; transform: scaleY(120); } }
+.shutter-rays { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; margin: -850px 0 0 -850px; pointer-events: none; opacity: 0; transition: opacity .5s;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 220, 140, .3) 0deg 6deg, transparent 6deg 18deg);
+  -webkit-mask-image: radial-gradient(circle, #000 10%, transparent 60%); mask-image: radial-gradient(circle, #000 10%, transparent 60%); animation: rotate 12s linear infinite; }
+#stage.named .shutter-rays { opacity: 1; }
+#stage.rolling .shutter-rays { animation-duration: 3s; }
+#stage.fin .shutter-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 110, 80, .34) 0deg 5deg, transparent 5deg 10deg, rgba(255, 230, 160, .3) 10deg 14deg, transparent 14deg 22deg); }
+.shutter-label em { font: 700 34px/1 var(--font-label); font-style: normal; letter-spacing: .36em; padding-left: .36em; margin-top: 8px; color: #fff6d6; text-shadow: 0 0 20px rgba(255, 215, 120, .9); }
+.shutter-label em:empty { display: none; }
+#stage.rolling .shutter-label { animation: label-throb .22s ease-in-out infinite; }
+@keyframes label-throb { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.035); } }
+#stage.fin .shutter-label { box-shadow: 0 0 0 3px #000, 0 0 0 9px #8a6118, 0 0 0 11px #fffdf0, 0 0 0 16px #6d4a12, 0 30px 80px #000, 0 0 160px rgba(255, 80, 50, .6); }
+.bolts { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 232px); display: flex; gap: 34px; pointer-events: none; opacity: 0; transition: opacity .3s; }
+#stage.ceremony .bolts { opacity: 1; }
+.bolts i { width: 34px; height: 34px; border-radius: 50%; background: #121216; box-shadow: inset 0 0 0 3px #6d4a12, inset 0 4px 8px #000; }
+.bolts i.on { background: radial-gradient(circle, #fff 0 20%, #ffd773 50%, #b8862b 100%); box-shadow: 0 0 26px 4px rgba(255, 215, 120, .9), inset 0 0 0 3px #f7e3a1; animation: bolt-on .35s var(--ease-back); }
+#stage.fin .bolts i.on:nth-child(even) { background: radial-gradient(circle, #fff 0 20%, #ff6a55 50%, #8e1d17 100%); box-shadow: 0 0 26px 4px rgba(255, 90, 60, .9), inset 0 0 0 3px #ffb1a3; }
+@keyframes bolt-on { from { transform: scale(2.2); } to { transform: scale(1); } }
+#stage.opening-slow .shutter { transition: transform 1.25s cubic-bezier(.65, 0, .15, 1); }
+.banner.next .banner-label { font-size: 70px; top: -170px; color: #fff; }
+.banner.next.final .banner-label { font-size: 88px; top: -185px; text-shadow: 0 0 34px rgba(255, 220, 140, 1), 0 0 80px rgba(255, 80, 50, .9), 0 4px 0 #2a1a03; }
+
+/* ==========================================================
+   確定演出
+   ========================================================== */
+#blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 2; }
+#blackout.on { opacity: .97; }
+#stage.sure { --rim: 1; --rim-speed: .55s; --rim-color: #ffffff; }
+#stage.sure .frame { box-shadow: 0 34px 80px rgba(0, 0, 0, .85), 0 0 0 2px #241803, inset 0 2px 3px rgba(255, 255, 255, .7), 0 0 90px rgba(255, 255, 255, .55), 0 0 40px rgba(255, 220, 140, .8); }
+#stage.sure .bulbs i { animation-duration: .3s; background: radial-gradient(circle, #fff 0 22%, #fff6cf 40%, rgba(255, 255, 255, .4) 52%, transparent 70%); }
+#stage.sure .knob-ball { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #fff6cf 8%, #f0c04c 28%, #b37a18 60%, #4a2c04 90%); filter: none !important; }
+.plate.sure { box-shadow: inset 0 0 0 3px #fff6cf, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 230, 160, .5), 0 0 60px rgba(255, 230, 160, .6); animation: sure-plate .4s ease-in-out infinite; }
+.plate.sure .plate-sub { color: #fff6d6; font-weight: 700; }
+@keyframes sure-plate { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
+#rotate { display: grid; } }
 @media (prefers-reduced-motion: reduce) { .rays, .banner-rays { animation: none !important; } }
