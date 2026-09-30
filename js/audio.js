@@ -189,6 +189,34 @@ const Sfx = (function () {
         [N.C6, N.E6, N.G6, N.C7].forEach((f) => bell(f, 2.6, 3, 0.12));
       }
     },
+    /* 当選レベル 1〜8。上のレベルほど音数・長さ・低音が増える。 */
+    win(L) {
+      if (L <= 2) {
+        SOUNDS.winSmall();
+        if (L === 2) { [N.E6, N.G6, N.C7, N.E7].forEach((f, i) => bell(f, 0.42 + i * 0.08, 0.9, 0.18)); tone({ f: 90, f2: 50, d: 0.3, g: 0.5 }); }
+        return;
+      }
+      if (L <= 5) {
+        SOUNDS.winMid();
+        if (L >= 4) { brass(N.C5, 0.62, 1.1, 0.09); brass(N.E5, 0.62, 1.1, 0.06); clang(0, 0.06, 1.0); }
+        if (L >= 5) {
+          tone({ f: 80, f2: 30, d: 0.9, g: 0.95 });
+          [N.C5, N.E5, N.G5, N.C6].forEach((f, i) => brass(f / 2, 1.5 + i * 0.16, 0.5, 0.1));
+          for (let t = 1.6; t < 3.8; t += 0.08) bell(N.C6 * Math.pow(2, Math.floor(Math.random() * 12) / 12), t, 0.4, 0.06);
+        }
+        return;
+      }
+      SOUNDS.winBig(L >= 7);
+      if (L >= 8) { // ジャックポット: ファンファーレをもう一段上で重ねる
+        const at = 5.4, up = 1.1225;
+        tone({ f: 80, f2: 28, at, d: 1.2, g: 1.0 });
+        clang(at, 0.1, 1.8);
+        [[N.C5, 0, 0.2], [N.C5, 0.24, 0.12], [N.E5, 0.4, 0.3], [N.G5, 0.74, 0.3], [N.C6, 1.08, 2.4]].forEach(([f, o, d]) => { brass(f * up / 2, at + o, d + 0.15, 0.13); brass(f * up, at + o, d + 0.15, 0.08); });
+        const sc = [N.C6, N.E6, N.G6, N.C7, N.E7, N.G7];
+        for (let t = at; t < at + 5.2; t += 0.06) bell(sc[Math.floor(Math.random() * sc.length)] * up, t, 0.5, 0.06 + Math.random() * 0.05);
+        noise({ ft: 'highpass', f: 4500, at, a: 0.6, d: 4.4, g: 0.07 });
+      }
+    },
     riser() {
       noise({ f: 180, f2: 7000, q: 1.4, a: 0.95, d: 0.04, g: 0.4 });
       tone({ type: 'sawtooth', f: 70, f2: 700, a: 0.95, d: 0.04, g: 0.13, lp: 2400 });
