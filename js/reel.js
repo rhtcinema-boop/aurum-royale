@@ -23,12 +23,16 @@ const Reel = (function () {
     2: { speed: 32, cruise: [1.0, 1.4], decel: 3.3, pause: 0.75, tease: 0.85 },
     3: { speed: 34, cruise: [1.6, 2.1], decel: 4.6, pause: 1.3, tease: 1 },
   };
+  const LINE_RGB = { 1: '233,194,94', 2: '110,200,255', 3: '255,110,90' }; // コマ境界線の色
   const NUM_FONT = '"Bodoni 72","Bodoni 72 Oldstyle","Didot","Bodoni MT","Times New Roman",serif';
   const LBL_FONT = '"Copperplate","Copperplate Gothic Bold","Cinzel","Trajan Pro","Times New Roman",serif';
   const PAL = {
     gold: { grad: ['#fff8d6', '#f6d571', '#c8922e', '#8f5f14', '#e9c25e', '#fff1b8'], ext: '#3b2505', edge: '#1a0f02', hi: 'rgba(255,250,220,.75)', glow: null },
     rich: { grad: ['#ffffff', '#ffe68a', '#e0a62f', '#9a6510', '#ffd76a', '#fff8d8'], ext: '#4a2c04', edge: '#1a0f02', hi: 'rgba(255,255,240,.9)', glow: 'rgba(255,200,80,.55)' },
     silver: { grad: ['#ffffff', '#d5dbe2', '#8d97a4', '#4c545f', '#b7c0ca', '#f4f7fa'], ext: '#1d2126', edge: '#08090b', hi: 'rgba(255,255,255,.7)', glow: null },
+    // NEXT STAGE は「次のステージの色」で描く（STAGE 1 では青、STAGE 2 では赤）
+    nextBlue: { grad: ['#ffffff', '#c9ecff', '#4fa8f0', '#1a5aa6', '#8fd4ff', '#ffffff'], ext: '#0a2a52', edge: '#030d1c', hi: 'rgba(255,255,255,.95)', glow: 'rgba(90,180,255,.75)' },
+    nextRed: { grad: ['#ffffff', '#ffd6c8', '#ff5a44', '#a3160f', '#ff9a80', '#fff3ea'], ext: '#4a0a06', edge: '#1a0302', hi: 'rgba(255,255,255,.95)', glow: 'rgba(255,80,50,.8)' },
     next: { grad: ['#ffffff', '#fff3c0', '#f0c04c', '#b37a18', '#ffe9a0', '#ffffff'], ext: '#4a2c04', edge: '#140b01', hi: 'rgba(255,255,255,.95)', glow: 'rgba(255,225,140,.7)' },
   };
 
@@ -79,16 +83,16 @@ const Reel = (function () {
     }
   }
 
-  function renderSharp(sym) {
+  function renderSharp(sym, nextPal) {
     const c = document.createElement('canvas');
     c.width = SW * S; c.height = CH * S;
     const x = c.getContext('2d');
     x.scale(S, S);
     if (sym === 'NEXT') {
-      metalText(x, 'NEXT', SW / 2, CH / 2 - 44, 92, LBL_FONT, PAL.next, 420);
-      metalText(x, 'STAGE', SW / 2, CH / 2 + 46, 92, LBL_FONT, PAL.next, 420);
-      chevrons(x, 66, CH / 2, 1, PAL.next);
-      chevrons(x, SW - 66, CH / 2, -1, PAL.next);
+      metalText(x, 'NEXT', SW / 2, CH / 2 - 44, 92, LBL_FONT, nextPal || PAL.next, 420);
+      metalText(x, 'STAGE', SW / 2, CH / 2 + 46, 92, LBL_FONT, nextPal || PAL.next, 420);
+      chevrons(x, 66, CH / 2, 1, nextPal || PAL.next);
+      chevrons(x, SW - 66, CH / 2, -1, nextPal || PAL.next);
     } else {
       const pal = sym === 0 ? PAL.silver : sym >= 10000 ? PAL.rich : PAL.gold;
       metalText(x, fmt(sym), SW / 2, CH / 2, 178, NUM_FONT, pal, 600);
@@ -111,10 +115,11 @@ const Reel = (function () {
   function build() {
     const seen = {};
     Object.keys(STRIPS).forEach((k) => STRIPS[k].forEach((sym) => {
-      if (seen[sym]) return;
-      seen[sym] = true;
-      const sharp = renderSharp(sym);
-      imgs[sym] = { sharp, mid: renderBlur(sharp, 20, 9), heavy: renderBlur(sharp, 70, 19) };
+      const key = sym === 'NEXT' ? 'NEXT@' + k : sym;
+      if (seen[key]) return;
+      seen[key] = true;
+      const sharp = renderSharp(sym, k === '1' ? PAL.nextBlue : PAL.nextRed);
+      imgs[key] = { sharp, mid: renderBlur(sharp, 20, 9), heavy: renderBlur(sharp, 70, 19) };
     }));
   }
 
@@ -141,7 +146,8 @@ const Reel = (function () {
       const d = p - i;                 // 0 で中央。p が増えると絵柄は下へ流れる
       const y = H / 2 + d * CH;
       const k = 1 - 0.1 * Math.min(1, d * d); // ドラム曲面の擬似遠近
-      const im = imgs[symAt(i)];
+      const sy = symAt(i);
+      const im = imgs[sy === 'NEXT' ? 'NEXT@' + stage : sy];
       drawLayer(im.heavy, true, y, k, aH * 0.92);
       drawLayer(im.mid, true, y, k, aM);
       drawLayer(im.sharp, false, y, k, aS);
@@ -149,7 +155,8 @@ const Reel = (function () {
       ctx.globalAlpha = 0.28 * (1 - aH);
       const ly = y + CH / 2;
       const g = ctx.createLinearGradient(40, 0, W - 40, 0);
-      g.addColorStop(0, 'rgba(233,194,94,0)'); g.addColorStop(0.5, 'rgba(233,194,94,1)'); g.addColorStop(1, 'rgba(233,194,94,0)');
+      const lc = LINE_RGB[stage];
+      g.addColorStop(0, 'rgba(' + lc + ',0)'); g.addColorStop(0.5, 'rgba(' + lc + ',1)'); g.addColorStop(1, 'rgba(' + lc + ',0)');
       ctx.fillStyle = g;
       ctx.fillRect(40, ly - 1, W - 80, 2);
     }
