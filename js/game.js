@@ -159,6 +159,7 @@ const Game = (function () {
     if (s.play && s.play.phase === 'shown') return showLocked(s.play, false);
     lockbar.classList.remove('show');
     if (s.play) return awaitLever(s.play.cur || 1, false);
+    clearSure();
     win.classList.remove('win', 'lose');
     cabinet.classList.remove('party');
     if (showingResult || curStage !== 1) { showingResult = false; setStage(1); }
@@ -257,12 +258,98 @@ const Game = (function () {
     runStage(Store.state.play, 1);
   }
 
+  /* ---------- 停止パターンの抽選（結果は確定済み。見せ方だけを変える） ----------
+     ハズレ(0)で止まるとき …「当たりと思いきやハズレ」: 当たり絵柄で止まりかけて滑る／行きかけて戻される
+     当たり・NEXT で止まるとき …「ハズレと思いきや当たり」: 0 で止まりかけて滑る／0 に行きかけて戻る／0 で一度止まって再始動
+     DRAMA はその演出が出る割合（ステージ別）。 */
+  const DRAMA = { lose: [0, 0.55, 0.7, 0.9], win: [0, 0.5, 0.65, 0.85] };
+  function pickPattern(st, sym) {
+    if (window.__fxTest && window.__fxTest.pat) return window.__fxTest.pat; // 演出確認用（結果には影響しない）
+    const good = st === 3 ? [100000, 50000] : ['NEXT', st === 1 ? 1000 : 5000];
+    const k = Math.random();
+    if (sym === 0) {
+      if (Math.random() > DRAMA.lose[st]) return { type: 'plain' };
+      if (k < 0.4) return { type: 'slip', bait: [good[0]] };
+      if (k < 0.75) return { type: 'back', bait: [good[0]] };
+      return { type: 'slip2', bait: [good[1], good[0]] };
+    }
+    if (Math.random() > DRAMA.win[st]) return { type: Math.random() < 0.5 ? 'plain' : 'slip' };
+    if (k < 0.3) return { type: 'slip', bait: [0] };
+    if (k < 0.55) return { type: 'back', bait: [0] };
+    if (k < 0.75) return { type: 'slip2', bait: [null, 0] };
+    return { type: 'respin' };
+  }
+
+  /* ---------- 確定演出 ----------
+     最終結果が 0 以外のプレイでだけ、低確率で発生する（ハズレのプレイでは絶対に出ない）。
+       freeze : レバー直後に暗転・無音 → 閃光
+       aura   : 回転中に筐体が白金に光り出す
+       late   : 停止の直前に告知音と閃光（最終ステージのみ）
+     SURE_RATE は1回のレバーあたりの発生率。1プレイで1回まで。 */
+  const SURE_RATE = { freeze: 0.1, aura: 0.12, late: 0.1 };
+  let sureShown = false;
+  function pickSure(play, st) {
+    if (sureShown || !(play.value > 0) || play.overflow) return null;
+    if (window.__fxTest && window.__fxTest.sure !== undefined) return window.__fxTest.sure;
+    const r = Math.random();
+    if (r < SURE_RATE.freeze) return 'freeze';
+    if (r < SURE_RATE.freeze + SURE_RATE.aura) return 'aura';
+    if (st === play.stage && r < SURE_RATE.freeze + SURE_RATE.aura + SURE_RATE.late) return 'late';
+    return null;
+  }
+  function announceSure() {
+    sureShown = true;
+    stageEl.classList.add('sure');
+    Sfx.play('kyuin');
+    flash(false);
+    restart(cabinet, 'shake');
+    FX.ring(CX, CY, 'white', 1200, 0.9);
+    FX.burst(CX, CY, 260, { max: 1500, life: 1.8, size: 26, colors: ['white', 'gold', 'white'] });
+    FX.rain(160, 1.2, ['white', 'gold']);
+    setPlate('spin sure', 'WIN CONFIRMED', '当選確定！');
+  }
+  function clearSure() { sureShown = false; stageEl.classList.remove('sure'); }
+
   /* 1ステージ分の演出。NEXT STAGE なら次のステージへ移り、再びレバー待ちに戻る。 */
   async function runStage(play, st) {
     busy = true;
     const sym = st < play.stage ? 'NEXT' : play.value;
-    setPlate('spin', 'GOOD LUCK', 'STAGE ' + st);
-    await spinReel(st, sym);
+    const pat = pickPattern(st, sym);
+    const sure = pickSure(play, st);
+    setPlate(sureShown ? 'spin sure' : 'spin', sureShown ? 'WIN CONFIRMED' : 'GOOD LUCK', sureShown ? '当選確定！' : 'STAGE ' + st);
+
+    if (sure === 'freeze') { // 暗転フリーズ → 閃光
+      $('blackout').classList.add('on');
+      Sfx.play('freeze');
+      await wait(1500);
+      $('blackout').classList.remove('on');
+      announceSure();
+      await wait(1100);
+    }
+    const extra = {};
+    if (sure === 'aura') extra.onStart = () => setTimeout(() => { if (busy) announceSure(); }, 900);
+    if (sure === 'late') extra.onNear = announceSure;
+
+    if (pat.type === 'respin') {
+      // ハズレと思いきや当たり: いったん 0 で完全に止まり、沈黙のあと再始動する
+      await spinReel(st, 0, { type: 'plain' }, extra);
+      win.classList.add('lose');
+      Sfx.play('zero');
+      if (!sureShown) setPlate('result zero', '0', '');
+      await wait(1500);
+      win.classList.remove('lose');
+      Sfx.play('revive');
+      flash(false);
+      restart(cabinet, 'shake');
+      FX.ring(CX, CY, 'gold', 1100, 0.8);
+      FX.burst(CX, CY, 200, { max: 1300, life: 1.6 });
+      setPlate('spin sure', 'ONE MORE CHANCE', 'まだ終わらない！');
+      await wait(900);
+      await spinReel(st, sym, { type: Math.random() < 0.5 ? 'slip' : 'plain', quick: true }, {});
+    } else {
+      await spinReel(st, sym, pat, extra);
+    }
+
     if (sym === 'NEXT') {
       // どこまで進んだかを保存（ここで落ちても次のステージのレバー待ちから再開）
       try { Store.transact((s) => { if (s.play) s.play.cur = st + 1; }); } catch (err) { /* 進行位置のみ */ }
@@ -272,17 +359,20 @@ const Game = (function () {
       return;
     }
     await resultFx(play);
+    clearSure();
     try { Store.transact((s) => { if (s.play) s.play.phase = 'shown'; }); } catch (err) { /* 表示済みフラグのみ。失敗しても整合性に影響なし */ }
     busy = false;
     if (Store.state.play) showLocked(Store.state.play, true); else refresh();
   }
 
-  function spinReel(st, sym) {
+  function spinReel(st, sym, pat, extra) {
     const beats = [];
+    extra = extra || {};
     return Reel.spin(st, sym, {
-      onStart: () => Sfx.play('reelStart'),
+      onStart: () => { Sfx.play('reelStart'); extra.onStart && extra.onStart(); },
       onTick: (n) => Sfx.tick(n),
       onSpeed: (n) => Sfx.spin(n),
+      onNear: () => { extra.onNear && extra.onNear(); },
       onTease: (dur) => {
         Sfx.play('tease', dur);
         $('content').querySelector('.spot').style.opacity = 1;
@@ -296,42 +386,140 @@ const Game = (function () {
         Sfx.play('stop');
         restart(cabinet, 'thud');
       },
-    });
+    }, pat);
   }
 
-  /* NEXT STAGE: 静止 → 光が集まる → 衝撃・フラッシュ → 強調表示 → シャッターで次ステージへ */
+  /* NEXT STAGE 突入演出（長尺）:
+     静止 → 筐体が震えながら光を吸い込む → 大爆発・NEXT STAGE 表示・花火 → 金庫扉が閉まる
+     → ロックが1つずつ外れる → ステージ名の刻印 → ドラムロール → 継ぎ目から光が溢れて扉が開く */
   async function nextStageFx(st) {
+    const to = st + 1, fin = to === 3;
+    const colors = fin ? ['gold', 'white', 'red', 'gold'] : ['gold', 'gold', 'white'];
+    const timers = [];
+    const later = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
+
+    // 1. 静止 → チャージ
     setPlate('spin', 'NEXT STAGE', '');
-    await wait(380);
+    await wait(450);
     $('dim').classList.add('on');
-    FX.converge(CX, CY, st === 2 ? 280 : 150, 1.0);
-    Sfx.play('riser');
     win.classList.add('win');
-    await wait(1000);
+    cabinet.classList.add('party', 'tremble');
+    Sfx.play('riser', 1.7);
+    FX.converge(CX, CY, fin ? 300 : 200, 1.7);
+    later(0.7, () => FX.converge(CX, CY, fin ? 260 : 160, 1.0));
+    await wait(1700);
+
+    // 2. 大爆発
+    cabinet.classList.remove('tremble');
     flash(false);
     restart(cabinet, 'shake');
-    cabinet.classList.add('party');
     Sfx.play('impact');
-    FX.ring(CX, CY, 'white', 1000, 0.8);
-    FX.burst(CX, CY, st === 2 ? 420 : 220, { max: st === 2 ? 1700 : 1300, life: 1.8, size: 26, colors: st === 2 ? ['gold', 'white', 'red', 'gold'] : undefined });
-    setTimeout(() => FX.ring(CX, CY, 'gold', 1200, 1.0), 140);
-    if (st === 2) { // 最終ステージ突入: 二段フラッシュ＋金粉
-      FX.rain(260, 1.4, ['gold', 'white', 'red']);
-      setTimeout(() => { flash(false); restart(cabinet, 'shake'); FX.ring(CX, CY, 'red', 1300, 1.0); Sfx.play('impact'); }, 520);
+    FX.ring(CX, CY, 'white', 1100, 0.8);
+    later(0.14, () => FX.ring(CX, CY, 'gold', 1300, 1.0));
+    later(0.3, () => FX.ring(CX, CY, fin ? 'red' : 'gold', 1500, 1.2));
+    FX.burst(CX, CY, fin ? 460 : 320, { max: fin ? 1800 : 1500, life: 2, size: 28, colors });
+    FX.rain(fin ? 420 : 260, 2.2, colors);
+    showBanner('next' + (fin ? ' final' : ''), fin ? 'FINAL STAGE' : 'STAGE UP', 'NEXT STAGE');
+    stageEl.dataset.win = fin ? 7 : 6; // 画面全体を当選時と同じ全開状態に
+    for (let t = 0.45; t < (fin ? 3.0 : 2.3); t += fin ? 0.26 : 0.36) {
+      later(t, () => {
+        const x = 200 + Math.random() * 1200, y = 110 + Math.random() * 580;
+        FX.burst(x, y, 70, { max: 650, colors });
+        FX.ring(x, y, fin && Math.random() < 0.5 ? 'red' : 'gold', 260, 0.5);
+        Sfx.play('pop');
+      });
     }
-    showBanner('next', st === 2 ? 'FINAL STAGE' : '', 'NEXT STAGE');
-    await wait(st === 2 ? 2300 : 1700);
+    if (fin) later(1.5, () => { flash(false); restart(cabinet, 'shake'); Sfx.play('impact'); FX.ring(CX, CY, 'white', 1400, 1.0); FX.burst(CX, CY, 300, { max: 1700, life: 2, colors }); });
+    await wait(fin ? 3300 : 2600);
+    timers.forEach(clearTimeout);
+    delete stageEl.dataset.win;
     await hideBanner();
     $('dim').classList.remove('on');
-    await transition(st + 1);
+
+    // 3. 扉が閉まり、開門の儀式へ
+    await ceremony(to);
     win.classList.remove('win');
     cabinet.classList.remove('party');
   }
 
-  /* 金属シャッターが閉じ、裏でステージを切り替えて開く */
+  const STAGE_NAMES = { 2: 'GOLD STAGE', 3: 'ROYAL FINAL' };
+  async function ceremony(to) {
+    const fin = to === 3;
+    const label = $('shutterLabel'), bolts = $('bolts');
+    const colors = fin ? ['gold', 'white', 'red'] : ['gold', 'white', 'gold'];
+    label.querySelector('b').textContent = to;
+    label.querySelector('em').textContent = STAGE_NAMES[to] || '';
+    label.classList.remove('show');
+    const n = fin ? 5 : 3;
+    bolts.innerHTML = new Array(n + 1).join('<i></i>');
+    stageEl.classList.remove('opening', 'opening-slow', 'blast');
+    stageEl.classList.toggle('fin', fin);
+
+    // 閉門
+    stageEl.classList.add('shut');
+    Sfx.play('shutterClose');
+    await wait(440);
+    flash(true);
+    FX.clear();
+    for (let x = 60; x <= 1540; x += 74) FX.burst(x, 450, 9, { max: 420, life: 0.9, size: 14, colors }); // 継ぎ目の火花
+    setStage(to);
+    FX.setAmbient(0);
+    await wait(700);
+
+    // ロック解除（1つずつ点灯）
+    stageEl.classList.add('ceremony');
+    await wait(500);
+    for (let i = 0; i < n; i++) {
+      bolts.children[i].classList.add('on');
+      Sfx.play('bolt', i / (n - 1));
+      FX.burst(800 + (i - (n - 1) / 2) * 68, 700, 22, { max: 380, life: 0.7, size: 12, colors });
+      await wait(fin ? 330 : 400);
+    }
+    await wait(350);
+
+    // ステージ名の刻印
+    label.classList.add('show');
+    stageEl.classList.add('named');
+    Sfx.play('stamp');
+    flash(true);
+    FX.ring(800, 450, fin ? 'red' : 'gold', 1000, 0.9);
+    FX.burst(800, 450, fin ? 260 : 180, { max: 1200, life: 1.6, colors });
+    await wait(900);
+
+    // ドラムロール（最終ステージは雷鳴つきで長い）
+    const roll = fin ? 2.6 : 1.7;
+    Sfx.play('roll', roll);
+    stageEl.classList.add('rolling');
+    const tm = [];
+    for (let t = 0.2; t < roll; t += fin ? 0.22 : 0.3) tm.push(setTimeout(() => FX.burst(200 + Math.random() * 1200, 450, 14, { max: 500, life: 0.8, size: 12, colors }), t * 1000));
+    if (fin) [0.7, 1.5, 2.1].forEach((t) => tm.push(setTimeout(() => { flash(true); Sfx.play('thunder'); }, t * 1000)));
+    await wait(roll * 1000);
+    tm.forEach(clearTimeout);
+
+    // 開門
+    stageEl.classList.remove('rolling');
+    stageEl.classList.add('blast');
+    Sfx.play('open', fin);
+    flash(false);
+    await wait(200);
+    label.classList.remove('show');
+    stageEl.classList.add('opening-slow');
+    stageEl.classList.remove('shut', 'ceremony', 'named');
+    restart(cabinet, 'shake');
+    setStage(to); // 環境パーティクルを再開
+    FX.ring(CX, CY, 'white', 1300, 1.0);
+    FX.burst(CX, CY, fin ? 420 : 300, { max: 1600, life: 2, size: 26, colors });
+    FX.rain(fin ? 360 : 220, 1.6, colors);
+    await wait(1300);
+    stageEl.classList.remove('opening-slow', 'blast', 'fin');
+  }
+
+  /* 次のプレイへ戻るときの短いシャッター */
   async function transition(to) {
     const label = $('shutterLabel');
     label.querySelector('b').textContent = to;
+    label.querySelector('em').textContent = '';
+    $('bolts').innerHTML = '';
     label.classList.remove('show');
     stageEl.classList.remove('opening');
     stageEl.classList.add('shut');
