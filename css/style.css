@@ -477,13 +477,97 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
    ========================================================== */
 #blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 2; }
 #blackout.on { opacity: .97; }
-#stage.sure { --rim: 1; --rim-speed: .55s; --rim-color: #ffffff; }
-#stage.sure .frame { box-shadow: 0 34px 80px rgba(0, 0, 0, .85), 0 0 0 2px #241803, inset 0 2px 3px rgba(255, 255, 255, .7), 0 0 90px rgba(255, 255, 255, .55), 0 0 40px rgba(255, 220, 140, .8); }
-#stage.sure .bulbs i { animation-duration: .3s; background: radial-gradient(circle, #fff 0 22%, #fff6cf 40%, rgba(255, 255, 255, .4) 52%, transparent 70%); }
-#stage.sure .knob-ball { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #fff6cf 8%, #f0c04c 28%, #b37a18 60%, #4a2c04 90%); filter: none !important; }
-.plate.sure { box-shadow: inset 0 0 0 3px #fff6cf, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 230, 160, .5), 0 0 60px rgba(255, 230, 160, .6); animation: sure-plate .4s ease-in-out infinite; }
-.plate.sure .plate-sub { color: #fff6d6; font-weight: 700; }
+/* 発生したら結果が出るまで全体が虹色になる */
+#stage.sure { --rim: 1; --rim-speed: .8s; --rays: 1; --beams: 1; }
+#stage.sure .rim { box-shadow: 0 0 70px rgba(255, 255, 255, .7); animation: none; }
+#stage.sure .rim::before { background: conic-gradient(#ff3b30, #ff9500, #ffe600, #34e36a, #32d4ff, #3a6bff, #c15cff, #ff3b9a, #ff3b30); }
+#stage.sure .rays { opacity: 1; animation-duration: 9s; background: conic-gradient(rgba(255, 59, 48, .3), rgba(255, 149, 0, .3), rgba(255, 230, 0, .3), rgba(52, 227, 106, .3), rgba(50, 212, 255, .3), rgba(58, 107, 255, .3), rgba(193, 92, 255, .3), rgba(255, 59, 48, .3)); }
+#stage.sure .rays2 { opacity: 1; background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .2) 0deg 3deg, transparent 3deg 14deg); }
+#stage.sure .frame, #stage.sure .knob-ball, #stage.sure .pointer, #stage.sure .rung.on, #stage.sure .lever-track, #stage.sure .beams { animation: hue 1.4s linear infinite; }
+@keyframes hue { from { filter: hue-rotate(0deg) saturate(1.7) brightness(1.1); } to { filter: hue-rotate(360deg) saturate(1.7) brightness(1.1); } }
+#stage.sure .frame { box-shadow: 0 34px 80px rgba(0, 0, 0, .85), 0 0 0 2px #241803, inset 0 2px 3px rgba(255, 255, 255, .7), 0 0 100px rgba(255, 200, 80, .8); }
+#stage.sure .bulbs i { animation-duration: .3s; }
+#stage.sure .bulbs i:nth-child(7n+1) { background: radial-gradient(circle, #fff 0 16%, #ff3b30 34%, rgba(255, 59, 48, .4) 50%, transparent 70%); }
+#stage.sure .bulbs i:nth-child(7n+2) { background: radial-gradient(circle, #fff 0 16%, #ff9500 34%, rgba(255, 149, 0, .4) 50%, transparent 70%); }
+#stage.sure .bulbs i:nth-child(7n+3) { background: radial-gradient(circle, #fff 0 16%, #ffe600 34%, rgba(255, 230, 0, .4) 50%, transparent 70%); }
+#stage.sure .bulbs i:nth-child(7n+4) { background: radial-gradient(circle, #fff 0 16%, #34e36a 34%, rgba(52, 227, 106, .4) 50%, transparent 70%); }
+#stage.sure .bulbs i:nth-child(7n+5) { background: radial-gradient(circle, #fff 0 16%, #32d4ff 34%, rgba(50, 212, 255, .4) 50%, transparent 70%); }
+#stage.sure .bulbs i:nth-child(7n+6) { background: radial-gradient(circle, #fff 0 16%, #3a6bff 34%, rgba(58, 107, 255, .4) 50%, transparent 70%); }
+#stage.sure .bulbs i:nth-child(7n) { background: radial-gradient(circle, #fff 0 16%, #c15cff 34%, rgba(193, 92, 255, .4) 50%, transparent 70%); }
+#stage.sure .knob-ball { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #fff6cf 8%, #f0c04c 28%, #b37a18 60%, #4a2c04 90%); }
+#stage.sure .plate-main, #stage.sure .banner .banner-value, #stage.sure .brand b {
+  background: linear-gradient(90deg, #ff3b30, #ff9500, #ffe600, #34e36a, #32d4ff, #3a6bff, #c15cff, #ff3b30, #ff9500, #ffe600, #34e36a, #32d4ff, #3a6bff, #c15cff, #ff3b30);
+  background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+}
+#stage.sure .plate-main, #stage.sure .brand b { animation: rainbow-slide 1.2s linear infinite; }
+#stage.sure .banner .banner-value { filter: drop-shadow(0 5px 0 rgba(0, 0, 0, .85)) drop-shadow(0 0 60px rgba(255, 255, 255, .9)); }
+@keyframes rainbow-slide { from { background-position: 0 0; } to { background-position: -100% 0; } }
+.plate.sure { box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 255, 255, .45), 0 0 60px rgba(255, 255, 255, .55); animation: sure-plate .4s ease-in-out infinite; }
+.plate.sure .plate-sub { color: #fff; font-weight: 700; }
 @keyframes sure-plate { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
+/* ==========================================================
+   ステージごとのテーマカラー
+     STAGE 1: ゴールド（暖色・落ち着き） / STAGE 2: サファイア（青＋紫） / STAGE 3: ルビー（真紅＋金）
+   --acc / --acc2 は rgba() 用の RGB 値。背景・光条・ライト・枠・電球・文字・扉・閃光がすべて連動する。
+   ========================================================== */
+#stage { --acc: 255, 215, 120; --acc2: 255, 240, 200; --text-grad: var(--gold-grad); --rung-bg: linear-gradient(180deg, #2c2413, #100c05);
+  --knob: radial-gradient(circle at 34% 28%, #ffffff 0%, #ffd9d2 5%, #e0352a 22%, #8e0f10 56%, #3a0406 86%, #1a0203 100%); }
+#stage[data-stage="2"] {
+  --accent: #8fd8ff; --accent-dim: #2f6fa8; --glow: rgba(80, 170, 255, .62); --halo: 0 0 90px rgba(70, 160, 255, .45); --rim-color: #d6f2ff;
+  --acc: 110, 200, 255; --acc2: 190, 120, 255;
+  --metal-frame: linear-gradient(145deg, #f2fbff 0%, #8fc4ea 16%, #1f4a78 34%, #cfeaff 50%, #3f7fb8 68%, #f2fbff 86%, #2a5a8c 100%);
+  --text-grad: linear-gradient(180deg, #ffffff 0%, #bfe6ff 28%, #4fa3e6 50%, #1c5a9c 54%, #8fd0ff 72%, #f2fbff 100%);
+  --rung-bg: linear-gradient(180deg, #10284a, #050c18);
+  --knob: radial-gradient(circle at 34% 28%, #ffffff 0%, #d6f0ff 5%, #2f8fe8 22%, #0f3f8e 56%, #04163a 86%, #020a1a 100%);
+}
+#stage[data-stage="3"] {
+  --accent: #ff9282; --accent-dim: #a3261d; --glow: rgba(255, 70, 50, .7); --halo: 0 0 110px rgba(255, 60, 40, .5), 0 0 50px rgba(255, 200, 120, .4); --rim-color: #ffe2c8;
+  --acc: 255, 95, 75; --acc2: 255, 215, 120;
+  --metal-frame: linear-gradient(145deg, #fff1d0 0%, #ff8a70 16%, #7a1210 34%, #ffd773 50%, #c0301f 68%, #fff1d0 86%, #8a1a14 100%);
+  --text-grad: linear-gradient(180deg, #ffffff 0%, #ffd6c8 28%, #ff5a44 50%, #a3160f 54%, #ff9a80 72%, #fff3ea 100%);
+  --rung-bg: linear-gradient(180deg, #3d0e0e, #140404);
+  --knob: radial-gradient(circle at 34% 28%, #ffffff 0%, #fff0c8 5%, #f0b83c 22%, #a3160f 58%, #3a0406 88%, #1a0203 100%);
+}
+.bg2 { background: radial-gradient(ellipse 75% 70% at 48% 42%, #174075 0%, #0a1a36 50%, #02050b 100%); }
+.bg3 { background: radial-gradient(ellipse 75% 70% at 48% 42%, #74121a 0%, #28080a 46%, #040203 100%); }
+.lattice { background: repeating-linear-gradient(45deg, rgba(var(--acc), .04) 0 2px, transparent 2px 34px), repeating-linear-gradient(-45deg, rgba(var(--acc), .04) 0 2px, transparent 2px 34px); }
+.rays, #stage[data-stage="3"] .rays { background: repeating-conic-gradient(from 0deg, rgba(var(--acc), .16) 0deg 5deg, transparent 5deg 15deg); }
+.rays2 { background: repeating-conic-gradient(from 0deg, rgba(var(--acc2), .17) 0deg 3deg, transparent 3deg 20deg); }
+#stage[data-stage="2"] .rays2 { opacity: .8; }
+.beam { background: linear-gradient(to top, rgba(var(--acc), .6), rgba(var(--acc), .13) 55%, transparent 88%); }
+.beam.l2, .beam.r2 { background: linear-gradient(to top, rgba(var(--acc2), .55), rgba(var(--acc2), .12) 55%, transparent 88%); }
+#stage[data-stage="2"] .beam.l2, #stage[data-stage="2"] .beam.r2 { display: block; }
+.rung.on { background: var(--rung-bg); }
+.rung.on b, .plate-main, .brand b, .shutter-label b { background: var(--text-grad); -webkit-background-clip: text; background-clip: text; }
+.plate.result .plate-main { background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; }
+.plate.result.zero .plate-main { background: var(--silver-grad); -webkit-background-clip: text; background-clip: text; }
+.plate.error .plate-main { background: none; }
+.bulbs i { background: radial-gradient(circle, #fff 0 14%, var(--accent) 30%, rgba(var(--acc), .35) 46%, transparent 68%); }
+#stage[data-stage="2"] .bulbs i:nth-child(even) { background: radial-gradient(circle, #fff 0 14%, #c9a0ff 30%, rgba(190, 120, 255, .35) 46%, transparent 68%); }
+#stage[data-stage="3"] .bulbs i:nth-child(even) { background: radial-gradient(circle, #fff 0 14%, #ffd773 30%, rgba(255, 215, 120, .35) 46%, transparent 68%); }
+.window::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(var(--acc), .13), transparent 72%); }
+.knob-ball { background: var(--knob); }
+@keyframes knobglow { 0%, 100% { box-shadow: inset 0 -12px 22px rgba(0, 0, 0, .6), inset 0 3px 6px rgba(255, 255, 255, .35), 0 14px 24px rgba(0, 0, 0, .7), 0 0 0 rgba(var(--acc), 0); } 50% { box-shadow: inset 0 -12px 22px rgba(0, 0, 0, .6), inset 0 3px 6px rgba(255, 255, 255, .35), 0 14px 24px rgba(0, 0, 0, .7), 0 0 50px rgba(var(--acc), .75); } }
+.lever-track { box-shadow: 0 0 0 3px #000, 0 0 0 9px var(--accent-dim), 0 0 0 11px var(--accent), 0 0 0 16px var(--accent-dim), 0 0 0 18px #0c0c0e, 0 24px 50px rgba(0, 0, 0, .8), inset 0 0 22px #000; }
+.lever-glow { background: linear-gradient(180deg, rgba(var(--acc), .05), var(--glow)); }
+#flash { background: radial-gradient(circle at 48% 47%, #fff 0%, rgba(var(--acc), .92) 32%, rgba(var(--acc), .6) 60%, rgba(var(--acc), 0) 100%); }
+.shutter-edge { background: var(--text-grad); box-shadow: 0 0 26px rgba(var(--acc), .6); }
+.shutter-label, #stage.fin .shutter-label { box-shadow: 0 0 0 3px #000, 0 0 0 9px var(--accent-dim), 0 0 0 11px var(--accent), 0 0 0 16px var(--accent-dim), 0 30px 80px #000, 0 0 150px var(--glow); }
+.shutter-label small { color: var(--accent); }
+.shutter-label em { text-shadow: 0 0 20px rgba(var(--acc), .95); }
+.seam, #stage.fin .seam { background: linear-gradient(90deg, transparent, rgba(var(--acc), 1) 15%, #fff 50%, rgba(var(--acc), 1) 85%, transparent); box-shadow: 0 0 55px 16px rgba(var(--acc), .85); }
+.shutter-rays, #stage.fin .shutter-rays { background: repeating-conic-gradient(from 0deg, rgba(var(--acc), .34) 0deg 5deg, transparent 5deg 10deg, rgba(var(--acc2), .28) 10deg 14deg, transparent 14deg 22deg); }
+.bolts i.on { background: radial-gradient(circle, #fff 0 20%, var(--accent) 50%, var(--accent-dim) 100%); box-shadow: 0 0 26px 4px rgba(var(--acc), .9), inset 0 0 0 3px #fff; }
+#stage.fin .bolts i.on:nth-child(even) { background: radial-gradient(circle, #fff 0 20%, #ffd773 50%, #b8862b 100%); box-shadow: 0 0 26px 4px rgba(255, 215, 120, .9), inset 0 0 0 3px #f7e3a1; }
+.banner.next .banner-rays { background: repeating-conic-gradient(from 0deg, rgba(var(--acc), .4) 0deg 7deg, transparent 7deg 13deg, rgba(var(--acc2), .3) 13deg 16deg, transparent 16deg 22deg); }
+.banner.next .banner-value { filter: drop-shadow(0 5px 0 rgba(0, 0, 0, .85)) drop-shadow(0 0 50px rgba(var(--acc), .95)); }
+.banner.next .banner-value span { background: var(--text-grad); -webkit-background-clip: text; background-clip: text; }
+.banner.next .banner-label, .banner.next.final .banner-label { text-shadow: 0 0 30px rgba(var(--acc), 1), 0 0 80px rgba(var(--acc), .8), 0 4px 0 rgba(0, 0, 0, .8); }
+#stage[data-win="7"]::after { background: radial-gradient(ellipse at 48% 47%, transparent 34%, rgba(var(--acc), .36) 100%); }
+#stage[data-win="8"]::after { background: radial-gradient(ellipse at 48% 47%, transparent 26%, rgba(var(--acc), .52) 100%); }
+#stage[data-stage="3"] .plate { box-shadow: inset 0 0 0 2px var(--accent-dim), inset 0 0 0 5px #000, inset 0 12px 24px rgba(0, 0, 0, .8), 0 16px 34px rgba(0, 0, 0, .6), 0 0 50px rgba(var(--acc), .3); }
+#stage[data-stage="2"] .plate { box-shadow: inset 0 0 0 2px var(--accent-dim), inset 0 0 0 5px #000, inset 0 12px 24px rgba(0, 0, 0, .8), 0 16px 34px rgba(0, 0, 0, .6), 0 0 50px rgba(var(--acc), .25); }
 
 /* ==========================================================
    ステージ突入時のカメラワーク（画面ごと寄る・弾ける・引く・揺れる）
@@ -508,74 +592,5 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 @keyframes letter-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
 
 #rotate { position: absolute; inset: 0; display: none; place-items: center; background: #050506; color: #e9c25e; font: 600 20px var(--font-ui); letter-spacing: .1em; text-align: center; }
-@media (orientation: portrait) { /* ==========================================================
-   ステージ突入の儀式（閉門 → ロック解除 → 刻印 → ドラムロール → 開門）
-   ========================================================== */
-.cabinet.tremble { animation: tremble .08s linear infinite; }
-@keyframes tremble { 0% { transform: translate(2px, -1px); } 25% { transform: translate(-2px, 2px); } 50% { transform: translate(1px, 2px); } 75% { transform: translate(-1px, -2px); } 100% { transform: translate(2px, 1px); } }
-.seam { position: absolute; left: 0; right: 0; top: 50%; height: 10px; margin-top: -5px; pointer-events: none; opacity: 0;
-  background: linear-gradient(90deg, transparent, #fff1b8 15%, #fff 50%, #fff1b8 85%, transparent); box-shadow: 0 0 50px 14px rgba(255, 215, 120, .8); }
-#stage.ceremony .seam { opacity: .55; animation: seam-pulse .9s ease-in-out infinite; }
-#stage.rolling .seam { opacity: 1; animation: seam-pulse .16s ease-in-out infinite; height: 16px; margin-top: -8px; }
-#stage.blast .seam { animation: seam-blast .7s ease-out forwards; }
-#stage.fin .seam { box-shadow: 0 0 60px 18px rgba(255, 90, 60, .85); }
-@keyframes seam-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
-@keyframes seam-blast { 0% { opacity: 1; transform: scaleY(1); } 40% { opacity: 1; transform: scaleY(70); } 100% { opacity: 0; transform: scaleY(120); } }
-.shutter-rays { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; margin: -850px 0 0 -850px; pointer-events: none; opacity: 0; transition: opacity .5s;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 220, 140, .3) 0deg 6deg, transparent 6deg 18deg);
-  -webkit-mask-image: radial-gradient(circle, #000 10%, transparent 60%); mask-image: radial-gradient(circle, #000 10%, transparent 60%); animation: rotate 12s linear infinite; }
-#stage.named .shutter-rays { opacity: 1; }
-#stage.rolling .shutter-rays { animation-duration: 3s; }
-#stage.fin .shutter-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 110, 80, .34) 0deg 5deg, transparent 5deg 10deg, rgba(255, 230, 160, .3) 10deg 14deg, transparent 14deg 22deg); }
-.shutter-label em { font: 700 34px/1 var(--font-label); font-style: normal; letter-spacing: .36em; padding-left: .36em; margin-top: 8px; color: #fff6d6; text-shadow: 0 0 20px rgba(255, 215, 120, .9); }
-.shutter-label em:empty { display: none; }
-#stage.rolling .shutter-label.show { animation: label-throb .22s ease-in-out infinite; }
-@keyframes label-throb { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.035); } }
-#stage.fin .shutter-label { box-shadow: 0 0 0 3px #000, 0 0 0 9px #8a6118, 0 0 0 11px #fffdf0, 0 0 0 16px #6d4a12, 0 30px 80px #000, 0 0 160px rgba(255, 80, 50, .6); }
-.bolts { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 232px); display: flex; gap: 34px; pointer-events: none; opacity: 0; transition: opacity .3s; }
-#stage.ceremony .bolts { opacity: 1; }
-.bolts i { width: 34px; height: 34px; border-radius: 50%; background: #121216; box-shadow: inset 0 0 0 3px #6d4a12, inset 0 4px 8px #000; }
-.bolts i.on { background: radial-gradient(circle, #fff 0 20%, #ffd773 50%, #b8862b 100%); box-shadow: 0 0 26px 4px rgba(255, 215, 120, .9), inset 0 0 0 3px #f7e3a1; animation: bolt-on .35s var(--ease-back); }
-#stage.fin .bolts i.on:nth-child(even) { background: radial-gradient(circle, #fff 0 20%, #ff6a55 50%, #8e1d17 100%); box-shadow: 0 0 26px 4px rgba(255, 90, 60, .9), inset 0 0 0 3px #ffb1a3; }
-@keyframes bolt-on { from { transform: scale(2.2); } to { transform: scale(1); } }
-#stage.opening-slow .shutter { transition: transform 1.25s cubic-bezier(.65, 0, .15, 1); }
-.banner.next .banner-label { font-size: 70px; top: -170px; color: #fff; }
-.banner.next.final .banner-label { font-size: 88px; top: -185px; text-shadow: 0 0 34px rgba(255, 220, 140, 1), 0 0 80px rgba(255, 80, 50, .9), 0 4px 0 #2a1a03; }
-
-/* ==========================================================
-   確定演出
-   ========================================================== */
-#blackout { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 2; }
-#blackout.on { opacity: .97; }
-#stage.sure { --rim: 1; --rim-speed: .55s; --rim-color: #ffffff; }
-#stage.sure .frame { box-shadow: 0 34px 80px rgba(0, 0, 0, .85), 0 0 0 2px #241803, inset 0 2px 3px rgba(255, 255, 255, .7), 0 0 90px rgba(255, 255, 255, .55), 0 0 40px rgba(255, 220, 140, .8); }
-#stage.sure .bulbs i { animation-duration: .3s; background: radial-gradient(circle, #fff 0 22%, #fff6cf 40%, rgba(255, 255, 255, .4) 52%, transparent 70%); }
-#stage.sure .knob-ball { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #fff6cf 8%, #f0c04c 28%, #b37a18 60%, #4a2c04 90%); filter: none !important; }
-.plate.sure { box-shadow: inset 0 0 0 3px #fff6cf, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 230, 160, .5), 0 0 60px rgba(255, 230, 160, .6); animation: sure-plate .4s ease-in-out infinite; }
-.plate.sure .plate-sub { color: #fff6d6; font-weight: 700; }
-@keyframes sure-plate { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
-
-/* ==========================================================
-   ステージ突入時のカメラワーク（画面ごと寄る・弾ける・引く・揺れる）
-   ========================================================== */
-#content { transform-origin: 770px 420px; }
-#content.zoom-charge { animation: zoom-charge 1.9s cubic-bezier(.5, 0, .9, .4) forwards; }
-@keyframes zoom-charge { to { transform: scale(1.2) rotate(-.8deg); } }
-#content.zoom-punch { animation: zoom-punch .75s var(--ease-back) both; }
-@keyframes zoom-punch { 0% { transform: scale(1.2) rotate(-.8deg); } 28% { transform: scale(.9) rotate(.7deg); } 100% { transform: scale(1) rotate(0); } }
-#content.reveal { animation: reveal 1.4s var(--ease-out) both; }
-@keyframes reveal { from { transform: scale(1.45); } to { transform: scale(1); } }
-#viewport.quake { animation: quake .55s cubic-bezier(.3, .7, .3, 1); }
-@keyframes quake { 0% { transform: translate(0, 0); } 10% { transform: translate(-16px, 12px); } 24% { transform: translate(15px, -11px); } 40% { transform: translate(-11px, 7px); } 58% { transform: translate(8px, -5px); } 78% { transform: translate(-4px, 3px); } 100% { transform: translate(0, 0); } }
-
-/* NEXT STAGE の文字が1文字ずつ飛び込む */
-.banner.next .banner-value { background: none; -webkit-text-fill-color: currentColor; color: #f6d571; }
-.banner.next.show .banner-value { animation: none; opacity: 1; }
-.banner.next .banner-value span { display: inline-block; opacity: 0; background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
-.banner.next.show .banner-value span { animation: letter-in .5s var(--ease-back) both, letter-wave 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * 60ms), calc(.9s + var(--i) * 70ms); }
-.banner.next.out .banner-value { animation: banner-out .45s ease-in both; }
-@keyframes letter-in { 0% { opacity: 0; transform: translateY(-300px) scale(3.2) rotate(-28deg); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
-@keyframes letter-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
-
-#rotate { display: grid; } }
+@media (orientation: portrait) { #rotate { display: grid; } }
 @media (prefers-reduced-motion: reduce) { .rays, .banner-rays { animation: none !important; } }
