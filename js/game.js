@@ -4,6 +4,11 @@ const Game = (function () {
   const $ = (id) => document.getElementById(id);
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const CX = 770, CY = 420;          // リール窓の中心（#content 座標）
+  /* ステージごとのテーマカラー（粒子・稲妻・衝撃波の色）: 1=ゴールド / 2=サファイア / 3=ルビー */
+  const STAGE_COL = { 1: ['gold', 'gold', 'white'], 2: ['blue', 'cyan', 'white', 'violet'], 3: ['red', 'gold', 'white', 'red'] };
+  const STAGE_ACC = { 1: 'gold', 2: 'cyan', 3: 'red' };
+  let sureShown = false; // 確定演出が発生中か
+  const RAINBOW = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'violet'];
   const MSG_EMPTY = '抽選可能回数がありません。設定を確認してください。';
   let scale = 1, busy = false, curStage = 1, showingResult = false;
   let stageEl, cabinet, win, plate, lockbar, banner;
@@ -45,7 +50,7 @@ const Game = (function () {
       r.classList.toggle('on', s === n);
       r.classList.toggle('done', s < n);
     });
-    FX.setAmbient([0, 0, 12, 30][n], n === 3 ? ['gold', 'white', 'red'] : ['gold', 'gold', 'white']);
+    if (sureShown) FX.setAmbient(40, RAINBOW); else FX.setAmbient([0, 0, 14, 30][n], STAGE_COL[n]);
     Reel.setStage(n, show);
     Sfx.setStage(n);
   }
@@ -287,9 +292,8 @@ const Game = (function () {
        freeze : レバー直後に暗転・無音 → 閃光
        aura   : 回転中に筐体が白金に光り出す
        late   : 停止の直前に告知音と閃光（最終ステージのみ）
-     SURE_RATE は1回のレバーあたりの発生率。1プレイで1回まで。 */
-  const SURE_RATE = { freeze: 0.1, aura: 0.12, late: 0.1 };
-  let sureShown = false;
+     SURE_RATE は1回のレバーあたりの発生率。1プレイで1回まで。発生後は結果が出るまで全体が虹色になる。 */
+  const SURE_RATE = { freeze: 0.02, aura: 0.03, late: 0.03 }; // 本当にたまに出る程度
   function pickSure(play, st) {
     if (sureShown || !(play.value > 0) || play.overflow) return null;
     if (window.__fxTest && window.__fxTest.sure !== undefined) return window.__fxTest.sure;
@@ -306,11 +310,20 @@ const Game = (function () {
     flash(false);
     restart(cabinet, 'shake');
     FX.ring(CX, CY, 'white', 1200, 0.9);
-    FX.burst(CX, CY, 260, { max: 1500, life: 1.8, size: 26, colors: ['white', 'gold', 'white'] });
-    FX.rain(160, 1.2, ['white', 'gold']);
+    RAINBOW.forEach((c, i) => setTimeout(() => FX.ring(CX, CY, c, 900 + i * 90, 0.8), 60 + i * 70)); // 虹の輪が次々に広がる
+    FX.burst(CX, CY, 360, { max: 1600, life: 2, size: 26, colors: RAINBOW });
+    FX.rain(240, 1.6, RAINBOW);
+    FX.flakes(160, 1.6, RAINBOW);
+    FX.streaks(CX, CY, 160, 1.0, { colors: RAINBOW });
+    FX.setAmbient(40, RAINBOW);
     setPlate('spin sure', 'WIN CONFIRMED', '当選確定！');
   }
-  function clearSure() { sureShown = false; stageEl.classList.remove('sure'); }
+  function clearSure() {
+    if (!sureShown) return;
+    sureShown = false;
+    stageEl.classList.remove('sure');
+    FX.setAmbient([0, 0, 14, 30][curStage], STAGE_COL[curStage]);
+  }
 
   /* 1ステージ分の演出。NEXT STAGE なら次のステージへ移り、再びレバー待ちに戻る。 */
   async function runStage(play, st) {
@@ -398,11 +411,11 @@ const Game = (function () {
   const RUNG_Y = { 1: 620, 2: 430, 3: 240 };
   async function nextStageFx(st) {
     const to = st + 1, fin = to === 3;
-    const colors = fin ? ['gold', 'white', 'red', 'gold'] : ['gold', 'gold', 'white'];
+    const colors = STAGE_COL[to], ACC = STAGE_ACC[to]; // 次のステージの色で演出する
     const content = $('content');
     const timers = [];
     const later = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
-    const zap = (x1, y1, x2, y2) => { FX.lightning(x1, y1, x2, y2, fin && Math.random() < 0.6 ? 'red' : 'white', fin ? 5 : 4); Sfx.play('zap'); };
+    const zap = (x1, y1, x2, y2) => { FX.lightning(x1, y1, x2, y2, Math.random() < 0.6 ? ACC : 'white', fin ? 5 : 4); Sfx.play('zap'); };
 
     // 1. 静止 → チャージ（画面がリールへ寄っていく）
     setPlate('spin', 'NEXT STAGE', '');
@@ -423,14 +436,15 @@ const Game = (function () {
     cabinet.classList.remove('tremble');
     content.classList.remove('zoom-charge');
     content.classList.add('zoom-punch');
+    stageEl.dataset.stage = to; // 爆発と同時に世界の色が次のステージの色へ変わる
     quake();
     flash(false);
     restart(cabinet, 'shake');
     Sfx.play('impact');
-    for (let i = 0; i < (fin ? 10 : 6); i++) { const a = (i / (fin ? 10 : 6)) * 6.28 + Math.random() * 0.4; FX.lightning(CX, CY, CX + Math.cos(a) * 900, CY + Math.sin(a) * 560, fin && i % 2 ? 'red' : 'white', 5); }
+    for (let i = 0; i < (fin ? 10 : 6); i++) { const a = (i / (fin ? 10 : 6)) * 6.28 + Math.random() * 0.4; FX.lightning(CX, CY, CX + Math.cos(a) * 900, CY + Math.sin(a) * 560, i % 2 ? ACC : 'white', 5); }
     FX.ring(CX, CY, 'white', 1100, 0.8);
-    later(0.14, () => FX.ring(CX, CY, 'gold', 1300, 1.0));
-    later(0.3, () => FX.ring(CX, CY, fin ? 'red' : 'gold', 1500, 1.2));
+    later(0.14, () => FX.ring(CX, CY, ACC, 1300, 1.0));
+    later(0.3, () => FX.ring(CX, CY, ACC, 1500, 1.2));
     FX.burst(CX, CY, fin ? 480 : 340, { max: fin ? 1900 : 1600, life: 2, size: 28, colors });
     FX.streaks(CX, CY, fin ? 260 : 180, fin ? 3.0 : 2.3, { colors });
     FX.fountain(120, 930, fin ? 160 : 110, fin ? 2.8 : 2.0, colors, { vx: 160 });
@@ -442,11 +456,11 @@ const Game = (function () {
       later(t, () => {
         const x = 200 + Math.random() * 1200, y = 110 + Math.random() * 480;
         Sfx.play('pop');
-        setTimeout(() => { FX.burst(x, y, 80, { max: 700, colors }); FX.ring(x, y, fin && Math.random() < 0.5 ? 'red' : 'gold', 280, 0.5); }, 300);
+        setTimeout(() => { FX.burst(x, y, 80, { max: 700, colors }); FX.ring(x, y, Math.random() < 0.5 ? ACC : 'white', 280, 0.5); }, 300);
       });
     }
     later(0.75, () => { quake(); FX.ring(CX, CY, 'white', 1400, 0.9); }); // 文字が揃った瞬間の追撃
-    if (fin) later(1.7, () => { flash(false); quake(); restart(cabinet, 'shake'); Sfx.play('thunder'); FX.ring(CX, CY, 'red', 1500, 1.0); FX.burst(CX, CY, 320, { max: 1800, life: 2, colors }); for (let i = 0; i < 6; i++) zap(CX, CY, rnd(0, 1600), rnd(0, 900)); });
+    if (fin) later(1.7, () => { flash(false); quake(); restart(cabinet, 'shake'); Sfx.play('thunder'); FX.ring(CX, CY, ACC, 1500, 1.0); FX.burst(CX, CY, 320, { max: 1800, life: 2, colors }); for (let i = 0; i < 6; i++) zap(CX, CY, rnd(0, 1600), rnd(0, 900)); });
     await wait(fin ? 3600 : 2800);
     timers.forEach(clearTimeout);
     delete stageEl.dataset.win;
@@ -461,11 +475,11 @@ const Game = (function () {
   }
   const rnd = (a, b) => a + Math.random() * (b - a);
 
-  const STAGE_NAMES = { 2: 'GOLD STAGE', 3: 'ROYAL FINAL' };
+  const STAGE_NAMES = { 2: 'SAPPHIRE STAGE', 3: 'RUBY FINAL' };
   async function ceremony(to) {
     const fin = to === 3;
     const label = $('shutterLabel'), bolts = $('bolts'), content = $('content');
-    const colors = fin ? ['gold', 'white', 'red'] : ['gold', 'white', 'gold'];
+    const colors = STAGE_COL[to], ACC = STAGE_ACC[to];
     label.querySelector('b').textContent = to;
     label.querySelector('em').textContent = STAGE_NAMES[to] || '';
     label.classList.remove('show');
@@ -495,7 +509,7 @@ const Game = (function () {
       bolts.children[i].classList.add('on');
       Sfx.play('bolt', i / (n - 1));
       FX.burst(bx, 700, 26, { max: 420, life: 0.7, size: 12, colors });
-      FX.lightning(bx, 690, bx + rnd(-60, 60), 455, fin && i % 2 ? 'red' : 'gold', 3);
+      FX.lightning(bx, 690, bx + rnd(-60, 60), 455, i % 2 ? 'white' : ACC, 3);
       FX.ring(bx, 700, 'gold', 90, 0.35);
       await wait(fin ? 330 : 400);
     }
@@ -508,7 +522,7 @@ const Game = (function () {
     Sfx.play('stamp');
     quake();
     flash(true);
-    FX.ring(800, 450, fin ? 'red' : 'gold', 1000, 0.9);
+    FX.ring(800, 450, ACC, 1000, 0.9);
     FX.ring(800, 450, 'white', 700, 0.6);
     FX.burst(800, 450, fin ? 300 : 200, { max: 1300, life: 1.6, colors });
     FX.streaks(800, 450, 120, 0.5, { colors });
@@ -522,7 +536,7 @@ const Game = (function () {
     FX.converge(800, 450, fin ? 240 : 150, roll);
     const tm = [];
     for (let t = 0.2; t < roll; t += fin ? 0.2 : 0.28) tm.push(setTimeout(() => FX.burst(200 + Math.random() * 1200, 450, 16, { max: 520, life: 0.8, size: 12, colors }), t * 1000));
-    if (fin) [0.6, 1.3, 1.9, 2.4].forEach((t) => tm.push(setTimeout(() => { flash(true); quake(); Sfx.play('thunder'); FX.lightning(rnd(100, 1500), -100, rnd(300, 1300), 450, 'red', 6); FX.lightning(rnd(100, 1500), 1000, rnd(300, 1300), 450, 'white', 5); }, t * 1000)));
+    if (fin) [0.6, 1.3, 1.9, 2.4].forEach((t) => tm.push(setTimeout(() => { flash(true); quake(); Sfx.play('thunder'); FX.lightning(rnd(100, 1500), -100, rnd(300, 1300), 450, ACC, 6); FX.lightning(rnd(100, 1500), 1000, rnd(300, 1300), 450, 'white', 5); }, t * 1000)));
     await wait(roll * 1000);
     tm.forEach(clearTimeout);
 
@@ -541,7 +555,7 @@ const Game = (function () {
     setStage(to); // 環境パーティクルを再開
     stageEl.dataset.win = fin ? 7 : 6;
     FX.ring(CX, CY, 'white', 1300, 1.0);
-    setTimeout(() => FX.ring(CX, CY, fin ? 'red' : 'gold', 1500, 1.2), 160);
+    setTimeout(() => FX.ring(CX, CY, ACC, 1500, 1.2), 160);
     FX.burst(CX, CY, fin ? 460 : 320, { max: 1700, life: 2, size: 26, colors });
     FX.streaks(CX, CY, fin ? 240 : 160, 1.2, { colors });
     [200, 600, 1000, 1400].forEach((x, i) => FX.fountain(x, 930, fin ? 90 : 60, 1.4 + i * 0.1, colors));
@@ -628,7 +642,7 @@ const Game = (function () {
     await wait(L >= 6 ? 600 : 250); // 一拍置いてから祝福
     const timers = [];
     const later = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
-    const colors = L >= 7 ? ['gold', 'white', 'red', 'gold'] : ['gold', 'gold', 'white'];
+    const colors = sureShown ? RAINBOW.concat(['white']) : ['gold', 'white'].concat(STAGE_COL[curStage]); // 金＋そのステージの色（確定中は虹）
 
     win.classList.add('win');
     cabinet.classList.add('party');
@@ -640,7 +654,7 @@ const Game = (function () {
     // 開幕の一撃
     flash(L < 5);
     FX.burst(CX, CY, fx.burst, { max: 700 + L * 110, life: 1.3 + L * 0.1, size: 20 + L, colors });
-    if (L >= 2) FX.ring(CX, CY, L >= 6 ? 'white' : 'gold', 800 + L * 50, 0.75);
+    if (L >= 2) FX.ring(CX, CY, L >= 6 ? 'white' : STAGE_ACC[curStage], 800 + L * 50, 0.75);
     if (L >= 4) later(0.16, () => FX.ring(CX, CY, 'gold', 1000 + L * 40, 0.95));
     if (fx.shake) restart(cabinet, 'shake');
     if (L >= 6) $('dim').classList.add('on');
@@ -673,7 +687,7 @@ const Game = (function () {
         later(t, () => {
           const x = 220 + Math.random() * 1160, y = 120 + Math.random() * 560;
           FX.burst(x, y, 50 + L * 8, { max: 500 + L * 40, colors });
-          FX.ring(x, y, L >= 7 && Math.random() < 0.4 ? 'red' : 'gold', 220 + L * 15, 0.5);
+          FX.ring(x, y, Math.random() < 0.4 ? STAGE_ACC[curStage] : 'gold', 220 + L * 15, 0.5);
         });
       }
     }
