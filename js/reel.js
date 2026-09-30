@@ -36,6 +36,9 @@ const Reel = (function () {
   const imgs = {};
 
   const mod = (a, n) => ((a % n) + n) % n;
+  // 停止位置の隣に見せる絵柄（「惜しい」演出用）を位置指定で差し替える
+  let ov = {};
+  const symAt = (i) => (ov[i] !== undefined ? ov[i] : strip[mod(i, strip.length)]);
   const fmt = (v) => Number(v).toLocaleString('en-US');
 
   function metalText(c, text, cx, cy, px, font, pal, maxW) {
@@ -138,7 +141,7 @@ const Reel = (function () {
       const d = p - i;                 // 0 で中央。p が増えると絵柄は下へ流れる
       const y = H / 2 + d * CH;
       const k = 1 - 0.1 * Math.min(1, d * d); // ドラム曲面の擬似遠近
-      const im = imgs[strip[mod(i, n)]];
+      const im = imgs[symAt(i)];
       drawLayer(im.heavy, true, y, k, aH * 0.92);
       drawLayer(im.mid, true, y, k, aM);
       drawLayer(im.sharp, false, y, k, aS);
@@ -161,40 +164,57 @@ const Reel = (function () {
   }
   const seg = (d, v0, v1, k) => ({ d, v0, v1, k });
 
-  function buildProfile(p0, st, sym) {
+  /* 停止パターン（o.type）
+       plain : そのまま止まる
+       slip  : 1コマ手前で止まりかけ → もう1コマ滑って止まる
+       slip2 : 2コマ手前・1コマ手前の2回止まりかけてから止まる
+       back  : 目標を通り過ぎて次の絵柄に行きかけ → 引き戻されて止まる
+     o.bait  : 止まりかけた位置に見せる絵柄（slip: [手前], slip2: [2つ手前, 手前], back: [次]）
+     o.quick : 再始動用の短い回転 */
+  function buildProfile(p0, st, sym, o) {
     const cfg = TIMING[st];
     const V = cfg.speed;
-    const tease = Math.random() < cfg.tease;
+    const type = o.type || 'plain';
+    const decT = o.quick ? 1.3 : cfg.decel, pauseT = o.quick ? 0.35 : cfg.pause;
     const TW = 0.2, AW = 0.11;                 // 始動時の「溜め」（わずかに逆方向へ引く）
     const vW = (AW * Math.PI) / TW;
-    const vL = 1.15;                           // デテントに落ちる瞬間の速度
+    const vP = 0.2, vPk = 1.55, vL = 1.15;     // 止まりかけ速度 / 倒れ込み最高速 / デテントに落ちる速度
+    let vEnd = vL, teaseIdx = -1;
     const accel = seg(0.42, vW, V);
     const tail = [];
-    let teaseAt = -1;
-    if (tease) {
-      const vP = 0.2, vPk = 1.55;
-      const decT = cfg.decel, pauseT = cfg.pause;
-      const X = seg(decT, V, vP, 2.2);
-      const P = seg(pauseT, vP, vP);
-      // 手前の絵柄の中心 -0.05 セルで止まりかけ、そこから残り 1.05 セルを倒れ込む
-      const need = 1.05 - pauseT * vP;
-      const nat = 0.55 * (vP + vPk) / 2 + 0.34 * (vPk + vL) / 2;
-      const sc = need / nat;
-      tail.push(X, P, seg(0.55 * sc, vP, vPk), seg(0.34 * sc, vPk, vL));
+    // 止まりかけ(vP)から dist セルを倒れ込み、速度 vOut で抜ける
+    const tip = (dist, vOut) => {
+      const sc = dist / (0.55 * (vP + vPk) / 2 + 0.34 * (vPk + vOut) / 2);
+      tail.push(seg(0.55 * sc, vP, vPk), seg(0.34 * sc, vPk, vOut));
+    };
+    if (type === 'slip') {
+      tail.push(seg(decT, V, vP, 2.2)); teaseIdx = tail.length;
+      tail.push(seg(pauseT, vP, vP)); tip(1.05 - pauseT * vP, vL);
+    } else if (type === 'slip2') {
+      const p1 = pauseT * 0.7;
+      tail.push(seg(decT, V, vP, 2.2)); teaseIdx = tail.length;
+      tail.push(seg(p1, vP, vP)); tip(1.0 - p1 * vP, vP);
+      tail.push(seg(pauseT, vP, vP)); tip(1.05 - pauseT * vP, vL);
+    } else if (type === 'back') {
+      tail.push(seg(decT, V, 0.9, 2.2)); teaseIdx = tail.length;
+      tail.push(seg(0.85 / 0.45, 0.9, 0));     // 目標を 0.55 コマ通り過ぎて失速
+      tail.push(seg(pauseT + 0.3, 0, 0));      // 宙づり
+      tail.push(seg(0.5, 0, -2.2));            // 引き戻し
+      vEnd = -2.2;
     } else {
-      tail.push(seg(cfg.decel + cfg.pause, V, vL + 0.5, 2.0), seg(0.45, vL + 0.5, vL));
+      tail.push(seg(decT + pauseT, V, vL + 0.5, 2.0), seg(0.45, vL + 0.5, vL));
     }
     let fixed = segDist(accel, 1);
     tail.forEach((s) => (fixed += segDist(s, 1)));
-    const minCruise = cfg.cruise[0] + Math.random() * (cfg.cruise[1] - cfg.cruise[0]);
+    const cr = o.quick ? [0.25, 0.4] : cfg.cruise;
+    const minCruise = cr[0] + Math.random() * (cr[1] - cr[0]);
     const n = STRIPS[st].length;
     let T = Math.ceil(p0 + fixed + V * minCruise);
     while (STRIPS[st][mod(T, n)] !== sym) T++;
     const cruise = seg((T - p0 - fixed) / V, V, V);
     const segs = [accel, cruise].concat(tail);
-    // 区間開始時刻と開始位置を前計算
-    let t = TW, p = p0;
-    segs.forEach((s, i) => { s.t0 = t; s.p0 = p; t += s.d; p += segDist(s, 1); if (tease && i === 3) teaseAt = s.t0; });
+    let t = TW, p = p0, teaseAt = -1;
+    segs.forEach((s, i) => { s.t0 = t; s.p0 = p; t += s.d; p += segDist(s, 1); if (i === teaseIdx + 2 && teaseIdx >= 0) teaseAt = s.t0; });
     const tStop = t;
     const SET = 0.75, OM = 19, ZE = 7;
     function at(time) {
@@ -203,7 +223,7 @@ const Reel = (function () {
       if (time >= tStop) {
         const u = time - tStop;
         if (u >= SET) return T;
-        return T + (vL / OM) * Math.exp(-ZE * u) * Math.sin(OM * u) * (1 - u / SET);
+        return T + (vEnd / OM) * Math.exp(-ZE * u) * Math.sin(OM * u) * (1 - u / SET);
       }
       for (let i = segs.length - 1; i >= 0; i--) {
         const s = segs[i];
@@ -211,17 +231,25 @@ const Reel = (function () {
       }
       return p0;
     }
-    return { at, T, V, tStop, total: tStop + SET, startAt: TW, teaseAt, teaseDur: tease ? tStop - teaseAt : 0 };
+    // 止まりかける位置に見せる絵柄
+    const bait = o.bait || [];
+    const put = (i, s) => { if (s !== undefined && s !== null) ov[i] = s; };
+    Object.keys(ov).forEach((k) => { if (Math.abs(k - p0) > 2) delete ov[k]; });
+    [T - 2, T - 1, T, T + 1].forEach((i) => delete ov[i]);
+    if (type === 'slip') put(T - 1, bait[0]);
+    else if (type === 'slip2') { put(T - 2, bait[0]); put(T - 1, bait[1]); }
+    else if (type === 'back') put(T + 1, bait[0]);
+    return { at, T, V, tStop, total: tStop + SET, startAt: TW, teaseAt, teaseDur: teaseAt >= 0 ? tStop - teaseAt : 0 };
   }
 
-  /* hooks: onStart, onTick(speedNorm), onSpeed(speedNorm), onTease(sec), onStop */
-  function spin(st, sym, hooks) {
+  /* hooks: onStart, onTick(speedNorm), onSpeed(speedNorm), onTease(sec), onNear（停止1秒前）, onStop */
+  function spin(st, sym, hooks, opts) {
     hooks = hooks || {};
     return new Promise((resolve) => {
-      const prof = buildProfile(pos, st, sym);
+      const prof = buildProfile(pos, st, sym, opts || {});
       const t0 = performance.now();
       let lastP = pos, lastT = 0, lastCell = Math.round(pos);
-      let started = false, teased = false, stopped = false;
+      let started = false, teased = false, neared = false, stopped = false;
       cancelAnimationFrame(raf);
       function frame(now) {
         const t = (now - t0) / 1000;
@@ -234,6 +262,7 @@ const Reel = (function () {
         if (cell !== lastCell && t < prof.tStop) { lastCell = cell; hooks.onTick && hooks.onTick(norm); }
         if (started && !stopped) hooks.onSpeed && hooks.onSpeed(norm);
         if (!teased && prof.teaseAt >= 0 && t >= prof.teaseAt) { teased = true; hooks.onTease && hooks.onTease(prof.teaseDur); }
+        if (!neared && t >= prof.tStop - 1.0) { neared = true; hooks.onNear && hooks.onNear(); }
         if (!stopped && t >= prof.tStop) { stopped = true; hooks.onSpeed && hooks.onSpeed(0); hooks.onStop && hooks.onStop(); }
         lastP = p; lastT = t;
         if (t >= prof.total) {
@@ -254,6 +283,7 @@ const Reel = (function () {
     cancelAnimationFrame(raf);
     stage = st;
     strip = STRIPS[st];
+    ov = {};
     let idx = 0;
     if (show !== undefined) { const i = strip.indexOf(show); if (i >= 0) idx = i; }
     pos = idx;
