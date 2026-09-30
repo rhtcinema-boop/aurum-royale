@@ -44,7 +44,7 @@ const Game = (function () {
       r.classList.toggle('on', s === n);
       r.classList.toggle('done', s < n);
     });
-    FX.setAmbient([0, 0, 7, 16][n], n === 3 ? ['gold', 'white', 'red'] : ['gold', 'gold', 'white']);
+    FX.setAmbient([0, 0, 12, 30][n], n === 3 ? ['gold', 'white', 'red'] : ['gold', 'gold', 'white']);
     Reel.setStage(n, show);
   }
 
@@ -156,8 +156,9 @@ const Game = (function () {
   function refresh() {
     if (busy) return;
     const s = Store.state;
-    if (s.play) return showLocked(s.play, false);
+    if (s.play && s.play.phase === 'shown') return showLocked(s.play, false);
     lockbar.classList.remove('show');
+    if (s.play) return awaitLever(s.play.cur || 1, false);
     win.classList.remove('win', 'lose');
     cabinet.classList.remove('party');
     if (showingResult || curStage !== 1) { showingResult = false; setStage(1); }
@@ -165,6 +166,17 @@ const Game = (function () {
     Lever.setEnabled(ok);
     if (ok) setPlate('idle', 'PULL THE LEVER', 'レバーを下まで引いてください');
     else setPlate('error', MSG_EMPTY);
+  }
+
+  /* 確定済みプレイの途中: このステージのレバーを客自身が引くのを待つ（再起動時の復元にも使用） */
+  function awaitLever(st, fresh) {
+    win.classList.remove('win', 'lose');
+    cabinet.classList.remove('party');
+    if (showingResult || curStage !== st) { showingResult = false; setStage(st); }
+    Lever.setEnabled(true);
+    if (st === 1) setPlate('idle', 'PULL THE LEVER', 'レバーを下まで引いてください');
+    else setPlate('idle', 'PULL THE LEVER', 'STAGE ' + st + ' ― もう一度レバーを引いてください');
+    if (fresh) Sfx.play('ok');
   }
 
   /* 結果表示＋レバー完全ロック（再起動時の復元にも使用） */
@@ -220,7 +232,10 @@ const Game = (function () {
      以降の演出は確定済みの結果をなぞるだけなので、途中で落ちても再抽選は起きない。 */
   function onPull() {
     const s0 = Store.state;
-    if (busy || !s0.session || s0.locked || s0.play) return refresh();
+    if (busy || !s0.session) return refresh();
+    // 2ステージ目以降: 結果は確定済み。レバーはそのステージの演出を始めるだけ（再抽選しない）
+    if (s0.play && s0.play.phase === 'drawn') return runStage(s0.play, s0.play.cur || 1);
+    if (s0.locked || s0.play) return refresh();
     let res;
     try {
       Store.transact((s) => {
@@ -228,7 +243,7 @@ const Game = (function () {
         const before = Engine.sumCounts(ses.remaining);
         res = Engine.draw(ses);
         Engine.applyDraw(ses, res);
-        s.play = { playNo: ses.playNo, stage: res.stage, value: res.value, overflow: res.overflow, phase: 'drawn', ts: Date.now() };
+        s.play = { playNo: ses.playNo, stage: res.stage, value: res.value, overflow: res.overflow, phase: 'drawn', cur: 1, ts: Date.now() };
         s.locked = true;
         Store.log(res.overflow ? 'OVERFLOW_PLAY' : 'PLAY', {
           playNo: ses.playNo, stage: res.stage, value: res.value, key: res.key, path: Engine.pathFor(res.stage),
@@ -239,22 +254,27 @@ const Game = (function () {
       UI.toast('抽選を開始できませんでした（保存エラー）。', 'err');
       return refresh();
     }
-    run(res);
+    runStage(Store.state.play, 1);
   }
 
-  async function run(res) {
+  /* 1ステージ分の演出。NEXT STAGE なら次のステージへ移り、再びレバー待ちに戻る。 */
+  async function runStage(play, st) {
     busy = true;
-    for (let st = 1; st <= res.stage; st++) {
-      const sym = st < res.stage ? 'NEXT' : res.value;
-      setPlate('spin', 'GOOD LUCK', 'STAGE ' + st);
-      if (st > 1) await wait(550);
-      await spinReel(st, sym);
-      if (sym === 'NEXT') await nextStageFx(st);
+    const sym = st < play.stage ? 'NEXT' : play.value;
+    setPlate('spin', 'GOOD LUCK', 'STAGE ' + st);
+    await spinReel(st, sym);
+    if (sym === 'NEXT') {
+      // どこまで進んだかを保存（ここで落ちても次のステージのレバー待ちから再開）
+      try { Store.transact((s) => { if (s.play) s.play.cur = st + 1; }); } catch (err) { /* 進行位置のみ */ }
+      await nextStageFx(st);
+      busy = false;
+      if (Store.state.play) awaitLever(st + 1, true); else refresh();
+      return;
     }
-    await resultFx(res);
+    await resultFx(play);
     try { Store.transact((s) => { if (s.play) s.play.phase = 'shown'; }); } catch (err) { /* 表示済みフラグのみ。失敗しても整合性に影響なし */ }
-    showLocked(Store.state.play, true);
     busy = false;
+    if (Store.state.play) showLocked(Store.state.play, true); else refresh();
   }
 
   function spinReel(st, sym) {
@@ -266,10 +286,12 @@ const Game = (function () {
       onTease: (dur) => {
         Sfx.play('tease', dur);
         $('content').querySelector('.spot').style.opacity = 1;
-        if (st >= 2) for (let t = 0; t < dur - 0.2; t += 0.62) beats.push(setTimeout(() => Sfx.play('heartbeat'), t * 1000));
+        if (st >= 2) for (let t = 0; t < dur - 0.2; t += st === 3 ? 0.5 : 0.62) beats.push(setTimeout(() => Sfx.play('heartbeat'), t * 1000));
+        if (st === 3) $('dim').classList.add('on');
       },
       onStop: () => {
         beats.forEach(clearTimeout);
+        $('dim').classList.remove('on');
         $('content').querySelector('.spot').style.opacity = '';
         Sfx.play('stop');
         restart(cabinet, 'thud');
@@ -282,7 +304,7 @@ const Game = (function () {
     setPlate('spin', 'NEXT STAGE', '');
     await wait(380);
     $('dim').classList.add('on');
-    FX.converge(CX, CY, 150, 1.0);
+    FX.converge(CX, CY, st === 2 ? 280 : 150, 1.0);
     Sfx.play('riser');
     win.classList.add('win');
     await wait(1000);
@@ -291,10 +313,14 @@ const Game = (function () {
     cabinet.classList.add('party');
     Sfx.play('impact');
     FX.ring(CX, CY, 'white', 1000, 0.8);
-    FX.burst(CX, CY, 220, { max: 1300, life: 1.8, size: 26 });
+    FX.burst(CX, CY, st === 2 ? 420 : 220, { max: st === 2 ? 1700 : 1300, life: 1.8, size: 26, colors: st === 2 ? ['gold', 'white', 'red', 'gold'] : undefined });
     setTimeout(() => FX.ring(CX, CY, 'gold', 1200, 1.0), 140);
-    showBanner('next', '', 'NEXT STAGE');
-    await wait(1700);
+    if (st === 2) { // 最終ステージ突入: 二段フラッシュ＋金粉
+      FX.rain(260, 1.4, ['gold', 'white', 'red']);
+      setTimeout(() => { flash(false); restart(cabinet, 'shake'); FX.ring(CX, CY, 'red', 1300, 1.0); Sfx.play('impact'); }, 520);
+    }
+    showBanner('next', st === 2 ? 'FINAL STAGE' : '', 'NEXT STAGE');
+    await wait(st === 2 ? 2300 : 1700);
     await hideBanner();
     $('dim').classList.remove('on');
     await transition(st + 1);
@@ -328,16 +354,32 @@ const Game = (function () {
     banner.className = 'banner ' + kind;
     $('bannerLabel').textContent = label;
     $('bannerValue').textContent = value;
+    $('bannerValue').classList.remove('slam');
     void banner.offsetWidth;
     banner.classList.add('show');
     win.classList.add('veil'); // リール上の同じ文字と重ならないよう一時的に沈める
   }
   async function hideBanner() {
+    $('bannerValue').classList.remove('slam');
     banner.classList.add('out');
     win.classList.remove('veil');
     await wait(460);
     banner.className = 'banner';
   }
+
+  /* 当選演出。金額ごとに1段ずつ強くなる（WIN_LEVELS の並び順がそのまま演出レベル 1〜8）。 */
+  const WIN_LEVELS = [500, 1000, 2000, 3000, 5000, 10000, 50000, 100000];
+  const WIN_FX = [
+    //  秒数  ラベル        粒子  金粉  花火間隔(秒)  揺れ回数  カウントアップ(秒)
+    { dur: 2.2, label: 'WIN',       burst: 70,  rain: 0,   fire: 0,    shake: 0, count: 0 },
+    { dur: 2.8, label: 'WIN',       burst: 110, rain: 0,   fire: 0,    shake: 0, count: 0 },
+    { dur: 3.4, label: 'NICE WIN',  burst: 150, rain: 70,  fire: 0,    shake: 0, count: 0.5 },
+    { dur: 4.0, label: 'BIG WIN',   burst: 190, rain: 130, fire: 1.0,  shake: 0, count: 0.7 },
+    { dur: 4.8, label: 'BIG WIN',   burst: 230, rain: 200, fire: 0.75, shake: 1, count: 0.9 },
+    { dur: 6.2, label: 'SUPER WIN', burst: 280, rain: 320, fire: 0.55, shake: 1, count: 1.3 },
+    { dur: 8.4, label: 'MEGA WIN',  burst: 340, rain: 520, fire: 0.4,  shake: 2, count: 1.8 },
+    { dur: 11.5, label: 'JACKPOT',  burst: 420, rain: 800, fire: 0.28, shake: 4, count: 2.4 },
+  ];
 
   async function resultFx(res) {
     const v = res.value;
@@ -349,45 +391,74 @@ const Game = (function () {
       await wait(1700);
       return;
     }
-    const tier = v >= 10000 ? 'big' : v >= 2000 ? 'mid' : 'small';
-    await wait(tier === 'big' ? 500 : 250); // 一拍置いてから祝福
+    const L = Math.max(1, WIN_LEVELS.filter((x) => x <= v).length);
+    const fx = WIN_FX[L - 1];
+    await wait(L >= 6 ? 600 : 250); // 一拍置いてから祝福
+    const timers = [];
+    const later = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
+    const colors = L >= 7 ? ['gold', 'white', 'red', 'gold'] : ['gold', 'gold', 'white'];
+
     win.classList.add('win');
     cabinet.classList.add('party');
-    setPlate('spin', 'WIN', '');
-    showBanner('win', 'WIN', fmtN(v));
-    const timers = [];
-    if (tier === 'small') {
-      Sfx.play('winSmall');
-      flash(true);
-      FX.burst(CX, CY, 90, { max: 800 });
-      await wait(2500);
-    } else if (tier === 'mid') {
-      Sfx.play('winMid');
-      flash(true);
-      FX.ring(CX, CY, 'gold', 900, 0.7);
-      FX.burst(CX, CY, 170, { max: 1100, life: 1.7 });
-      FX.rain(110, 1.6);
-      await wait(3600);
-    } else {
-      const jackpot = v >= 100000;
-      Sfx.play('winBig', jackpot);
-      flash(false);
-      restart(cabinet, 'shake');
-      FX.ring(CX, CY, 'white', 1100, 0.8);
-      FX.burst(CX, CY, 260, { max: 1400, life: 2, size: 28 });
-      const dur = jackpot ? 7.5 : 4.6;
-      FX.rain(jackpot ? 520 : 300, dur - 1.2);
-      for (let t = 0.5; t < dur - 1; t += jackpot ? 0.45 : 0.7) {
-        timers.push(setTimeout(() => {
-          const x = 250 + Math.random() * 1100, y = 150 + Math.random() * 520;
-          FX.burst(x, y, 70, { max: 700, colors: ['gold', 'white', 'gold', curStage === 3 ? 'red' : 'gold'] });
-          FX.ring(x, y, 'gold', 260, 0.5);
-        }, t * 1000));
-      }
-      if (jackpot) timers.push(setTimeout(() => { flash(false); restart(cabinet, 'shake'); FX.ring(CX, CY, 'white', 1200, 0.9); }, 2600));
-      await wait(dur * 1000);
+    stageEl.dataset.win = L;
+    setPlate('spin', fx.label, '');
+    showBanner('win lv' + L, fx.label, fx.count ? '0' : fmtN(v));
+    Sfx.play('win', L);
+
+    // 開幕の一撃
+    flash(L < 5);
+    FX.burst(CX, CY, fx.burst, { max: 700 + L * 110, life: 1.3 + L * 0.1, size: 20 + L, colors });
+    if (L >= 2) FX.ring(CX, CY, L >= 6 ? 'white' : 'gold', 800 + L * 50, 0.75);
+    if (L >= 4) later(0.16, () => FX.ring(CX, CY, 'gold', 1000 + L * 40, 0.95));
+    if (fx.shake) restart(cabinet, 'shake');
+    if (L >= 6) $('dim').classList.add('on');
+
+    // 金額カウントアップ → 確定の一撃
+    if (fx.count) {
+      const t0 = performance.now(), el = $('bannerValue');
+      let lastTick = 0;
+      const step = (now) => {
+        const u = Math.min(1, (now - t0) / (fx.count * 1000));
+        const e = 1 - Math.pow(1 - u, 3);
+        el.textContent = fmtN(Math.round((v * e) / 100) * 100);
+        if (now - lastTick > 55 && u < 1) { lastTick = now; Sfx.tick(0.1 + 0.2 * u); }
+        if (u < 1 && stageEl.dataset.win) return requestAnimationFrame(step);
+        el.textContent = fmtN(v);
+      };
+      requestAnimationFrame(step);
+      later(fx.count, () => {
+        restart($('bannerValue'), 'slam');
+        Sfx.play('stop');
+        FX.burst(CX, CY, 60 + L * 20, { max: 900, colors });
+        if (L >= 5) flash(true);
+      });
     }
+
+    // 金粉と花火（レベルが上がるほど多く・速く・長く）
+    if (fx.rain) FX.rain(fx.rain, fx.dur - 1.2, colors);
+    if (fx.fire) {
+      for (let t = 0.6; t < fx.dur - 0.9; t += fx.fire) {
+        later(t, () => {
+          const x = 220 + Math.random() * 1160, y = 120 + Math.random() * 560;
+          FX.burst(x, y, 50 + L * 8, { max: 500 + L * 40, colors });
+          FX.ring(x, y, L >= 7 && Math.random() < 0.4 ? 'red' : 'gold', 220 + L * 15, 0.5);
+        });
+      }
+    }
+    // 追撃の衝撃波（SUPER WIN 以上）
+    for (let i = 1; i < fx.shake; i++) {
+      later((fx.dur / fx.shake) * i, () => {
+        flash(false);
+        restart(cabinet, 'shake');
+        FX.ring(CX, CY, 'white', 1300, 0.9);
+        FX.burst(CX, CY, 260, { max: 1500, life: 2, size: 28, colors });
+      });
+    }
+
+    await wait(fx.dur * 1000);
     timers.forEach(clearTimeout);
+    delete stageEl.dataset.win;
+    $('dim').classList.remove('on');
     await hideBanner();
     cabinet.classList.remove('party');
     setPlate('result', fmtN(v), '');
