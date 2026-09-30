@@ -226,6 +226,8 @@ html, body {
 .shutter-label small { font: 700 40px/1 var(--font-label); letter-spacing: .5em; padding-left: .5em; color: #e9c25e; }
 .shutter-label b { font: 700 210px/1 var(--font-num); background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; filter: drop-shadow(0 5px 0 #2a1a03); }
 #stage.shut .shutter-label.show { opacity: 1; transform: translate(-50%, -50%) scale(1); transition: opacity .25s, transform .5s var(--ease-back); }
+#stage.ceremony .shutter-label.show { transition: none; animation: stamp-in .36s cubic-bezier(.7, 0, 1, .6) both; }
+@keyframes stamp-in { 0% { opacity: 0; transform: translate(-50%, -50%) scale(3.4) rotate(-9deg); } 30% { opacity: 1; } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); } }
 
 /* ---------- スタッフ認証バー ---------- */
 .lockbar { position: absolute; left: 350px; top: 716px; width: 840px; height: 140px; border-radius: 24px; display: none; align-items: center; justify-content: space-between; gap: 24px; padding: 0 30px 0 34px; background: linear-gradient(180deg, #1a1a1f, #0a0a0c); box-shadow: inset 0 0 0 2px var(--accent-dim), inset 0 0 0 5px #000, 0 18px 40px rgba(0, 0, 0, .7); }
@@ -457,7 +459,7 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 #stage.fin .shutter-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 110, 80, .34) 0deg 5deg, transparent 5deg 10deg, rgba(255, 230, 160, .3) 10deg 14deg, transparent 14deg 22deg); }
 .shutter-label em { font: 700 34px/1 var(--font-label); font-style: normal; letter-spacing: .36em; padding-left: .36em; margin-top: 8px; color: #fff6d6; text-shadow: 0 0 20px rgba(255, 215, 120, .9); }
 .shutter-label em:empty { display: none; }
-#stage.rolling .shutter-label { animation: label-throb .22s ease-in-out infinite; }
+#stage.rolling .shutter-label.show { animation: label-throb .22s ease-in-out infinite; }
 @keyframes label-throb { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.035); } }
 #stage.fin .shutter-label { box-shadow: 0 0 0 3px #000, 0 0 0 9px #8a6118, 0 0 0 11px #fffdf0, 0 0 0 16px #6d4a12, 0 30px 80px #000, 0 0 160px rgba(255, 80, 50, .6); }
 .bolts { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 232px); display: flex; gap: 34px; pointer-events: none; opacity: 0; transition: opacity .3s; }
@@ -482,6 +484,28 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 .plate.sure { box-shadow: inset 0 0 0 3px #fff6cf, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 230, 160, .5), 0 0 60px rgba(255, 230, 160, .6); animation: sure-plate .4s ease-in-out infinite; }
 .plate.sure .plate-sub { color: #fff6d6; font-weight: 700; }
 @keyframes sure-plate { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
+/* ==========================================================
+   ステージ突入時のカメラワーク（画面ごと寄る・弾ける・引く・揺れる）
+   ========================================================== */
+#content { transform-origin: 770px 420px; }
+#content.zoom-charge { animation: zoom-charge 1.9s cubic-bezier(.5, 0, .9, .4) forwards; }
+@keyframes zoom-charge { to { transform: scale(1.2) rotate(-.8deg); } }
+#content.zoom-punch { animation: zoom-punch .75s var(--ease-back) both; }
+@keyframes zoom-punch { 0% { transform: scale(1.2) rotate(-.8deg); } 28% { transform: scale(.9) rotate(.7deg); } 100% { transform: scale(1) rotate(0); } }
+#content.reveal { animation: reveal 1.4s var(--ease-out) both; }
+@keyframes reveal { from { transform: scale(1.45); } to { transform: scale(1); } }
+#viewport.quake { animation: quake .55s cubic-bezier(.3, .7, .3, 1); }
+@keyframes quake { 0% { transform: translate(0, 0); } 10% { transform: translate(-16px, 12px); } 24% { transform: translate(15px, -11px); } 40% { transform: translate(-11px, 7px); } 58% { transform: translate(8px, -5px); } 78% { transform: translate(-4px, 3px); } 100% { transform: translate(0, 0); } }
+
+/* NEXT STAGE の文字が1文字ずつ飛び込む */
+.banner.next .banner-value { background: none; -webkit-text-fill-color: currentColor; color: #f6d571; }
+.banner.next.show .banner-value { animation: none; opacity: 1; }
+.banner.next .banner-value span { display: inline-block; opacity: 0; background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.banner.next.show .banner-value span { animation: letter-in .5s var(--ease-back) both, letter-wave 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * 60ms), calc(.9s + var(--i) * 70ms); }
+.banner.next.out .banner-value { animation: banner-out .45s ease-in both; }
+@keyframes letter-in { 0% { opacity: 0; transform: translateY(-300px) scale(3.2) rotate(-28deg); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes letter-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
 
 #rotate { position: absolute; inset: 0; display: none; place-items: center; background: #050506; color: #e9c25e; font: 600 20px var(--font-ui); letter-spacing: .1em; text-align: center; }
 @media (orientation: portrait) { /* ==========================================================
@@ -505,7 +529,7 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 #stage.fin .shutter-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 110, 80, .34) 0deg 5deg, transparent 5deg 10deg, rgba(255, 230, 160, .3) 10deg 14deg, transparent 14deg 22deg); }
 .shutter-label em { font: 700 34px/1 var(--font-label); font-style: normal; letter-spacing: .36em; padding-left: .36em; margin-top: 8px; color: #fff6d6; text-shadow: 0 0 20px rgba(255, 215, 120, .9); }
 .shutter-label em:empty { display: none; }
-#stage.rolling .shutter-label { animation: label-throb .22s ease-in-out infinite; }
+#stage.rolling .shutter-label.show { animation: label-throb .22s ease-in-out infinite; }
 @keyframes label-throb { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.035); } }
 #stage.fin .shutter-label { box-shadow: 0 0 0 3px #000, 0 0 0 9px #8a6118, 0 0 0 11px #fffdf0, 0 0 0 16px #6d4a12, 0 30px 80px #000, 0 0 160px rgba(255, 80, 50, .6); }
 .bolts { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 232px); display: flex; gap: 34px; pointer-events: none; opacity: 0; transition: opacity .3s; }
@@ -530,6 +554,28 @@ input[type=range].vol { width: 380px; height: 44px; accent-color: #e9c25e; touch
 .plate.sure { box-shadow: inset 0 0 0 3px #fff6cf, inset 0 0 0 6px #000, inset 0 0 30px rgba(255, 230, 160, .5), 0 0 60px rgba(255, 230, 160, .6); animation: sure-plate .4s ease-in-out infinite; }
 .plate.sure .plate-sub { color: #fff6d6; font-weight: 700; }
 @keyframes sure-plate { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+
+/* ==========================================================
+   ステージ突入時のカメラワーク（画面ごと寄る・弾ける・引く・揺れる）
+   ========================================================== */
+#content { transform-origin: 770px 420px; }
+#content.zoom-charge { animation: zoom-charge 1.9s cubic-bezier(.5, 0, .9, .4) forwards; }
+@keyframes zoom-charge { to { transform: scale(1.2) rotate(-.8deg); } }
+#content.zoom-punch { animation: zoom-punch .75s var(--ease-back) both; }
+@keyframes zoom-punch { 0% { transform: scale(1.2) rotate(-.8deg); } 28% { transform: scale(.9) rotate(.7deg); } 100% { transform: scale(1) rotate(0); } }
+#content.reveal { animation: reveal 1.4s var(--ease-out) both; }
+@keyframes reveal { from { transform: scale(1.45); } to { transform: scale(1); } }
+#viewport.quake { animation: quake .55s cubic-bezier(.3, .7, .3, 1); }
+@keyframes quake { 0% { transform: translate(0, 0); } 10% { transform: translate(-16px, 12px); } 24% { transform: translate(15px, -11px); } 40% { transform: translate(-11px, 7px); } 58% { transform: translate(8px, -5px); } 78% { transform: translate(-4px, 3px); } 100% { transform: translate(0, 0); } }
+
+/* NEXT STAGE の文字が1文字ずつ飛び込む */
+.banner.next .banner-value { background: none; -webkit-text-fill-color: currentColor; color: #f6d571; }
+.banner.next.show .banner-value { animation: none; opacity: 1; }
+.banner.next .banner-value span { display: inline-block; opacity: 0; background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.banner.next.show .banner-value span { animation: letter-in .5s var(--ease-back) both, letter-wave 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * 60ms), calc(.9s + var(--i) * 70ms); }
+.banner.next.out .banner-value { animation: banner-out .45s ease-in both; }
+@keyframes letter-in { 0% { opacity: 0; transform: translateY(-300px) scale(3.2) rotate(-28deg); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes letter-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
 
 #rotate { display: grid; } }
 @media (prefers-reduced-motion: reduce) { .rays, .banner-rays { animation: none !important; } }
