@@ -217,10 +217,77 @@ const Sfx = (function () {
         noise({ ft: 'highpass', f: 4500, at, a: 0.6, d: 4.4, g: 0.07 });
       }
     },
-    riser() {
-      noise({ f: 180, f2: 7000, q: 1.4, a: 0.95, d: 0.04, g: 0.4 });
-      tone({ type: 'sawtooth', f: 70, f2: 700, a: 0.95, d: 0.04, g: 0.13, lp: 2400 });
-      tone({ f: 220, f2: 1760, a: 0.95, d: 0.04, g: 0.1, rev: 0.4 });
+    riser(dur) {
+      const a = (dur || 1) - 0.05;
+      noise({ f: 180, f2: 7000, q: 1.4, a, d: 0.04, g: 0.4 });
+      tone({ type: 'sawtooth', f: 70, f2: 700, a, d: 0.04, g: 0.13, lp: 2400 });
+      tone({ f: 220, f2: 1760, a, d: 0.04, g: 0.1, rev: 0.4 });
+      for (let t = 0; t < a; t += 0.11) tone({ f: 50 + 40 * (t / a), at: t, d: 0.07, g: 0.25 + 0.3 * (t / a) }); // 震え
+    },
+    pop() {
+      tone({ f: 140, f2: 60, d: 0.18, g: 0.45 });
+      noise({ ft: 'highpass', f: 3000, d: 0.25, g: 0.12, rev: 0.4 });
+      bell(N.C7 * (1 + Math.random() * 0.5), 0.02, 0.4, 0.06);
+    },
+    bolt(p) {
+      tone({ f: 130, f2: 60, d: 0.16, g: 0.9 });
+      noise({ ft: 'lowpass', f: 1800, d: 0.06, g: 0.5 });
+      tone({ type: 'triangle', f: 500 + 320 * (p || 0), d: 0.25, g: 0.14, rev: 0.5 });
+      bell(N.C6 * Math.pow(2, (p || 0) * 7 / 12), 0.03, 0.5, 0.1);
+    },
+    stamp() {
+      tone({ f: 95, f2: 30, d: 0.9, g: 1.0 });
+      noise({ ft: 'lowpass', f: 3000, f2: 200, d: 0.4, g: 0.6, rev: 0.4 });
+      clang(0, 0.12, 1.6);
+      brass(N.C5 / 2, 0.05, 0.8, 0.12); brass(N.G5 / 2, 0.05, 0.8, 0.09); brass(N.C5, 0.05, 0.8, 0.07);
+    },
+    roll(dur) {
+      // スネアロール: 徐々に速く・大きく
+      let t = 0, gap = 0.085;
+      while (t < dur) {
+        const u = t / dur;
+        noise({ f: 1800, q: 0.7, at: t, d: 0.05, g: 0.1 + 0.3 * u });
+        tone({ f: 190, f2: 140, at: t, d: 0.04, g: 0.08 + 0.2 * u });
+        gap = 0.085 - 0.05 * u; t += gap;
+      }
+      tone({ type: 'sawtooth', f: 110, f2: 330, a: dur * 0.95, d: 0.05, g: 0.1, lp: 1800 });
+      noise({ f: 300, f2: 5000, q: 1, a: dur * 0.95, d: 0.05, g: 0.22 });
+    },
+    thunder() {
+      noise({ ft: 'lowpass', f: 900, f2: 90, d: 1.1, g: 0.8, rev: 0.6 });
+      tone({ f: 60, f2: 28, d: 0.9, g: 0.8 });
+      noise({ ft: 'highpass', f: 2500, d: 0.08, g: 0.35 });
+    },
+    open(fin) {
+      tone({ f: 70, f2: 24, d: 1.6, g: 1.0 });
+      noise({ ft: 'lowpass', f: 5000, f2: 150, d: 0.9, g: 0.7, rev: 0.5 });
+      noise({ f: 250, f2: 2600, q: 0.8, a: 0.2, d: 0.9, g: 0.3 });
+      clang(0, 0.12, 1.8);
+      const ch = fin ? [N.C5, N.E5, N.G5, N.C6, N.E6] : [N.C5, N.G5, N.C6];
+      ch.forEach((f) => { brass(f / 2, 0.08, 1.6, 0.1); brass(f, 0.08, 1.6, 0.06); });
+      [N.C6, N.E6, N.G6, N.C7, N.E7, N.G7].forEach((f, i) => bell(f, 0.2 + i * 0.07, 1.2, 0.16));
+      for (let t = 0.6; t < (fin ? 2.4 : 1.6); t += 0.07) bell(N.C6 * Math.pow(2, Math.floor(Math.random() * 16) / 12), t, 0.4, 0.06);
+    },
+    /* 確定告知音（キュイン） */
+    kyuin() {
+      tone({ type: 'sawtooth', f: 500, f2: 3200, a: 0.16, d: 0.5, g: 0.2, lp: 6000, rev: 0.5 });
+      tone({ f: 1000, f2: 6400, a: 0.16, d: 0.6, g: 0.16, rev: 0.5 });
+      [N.E6, N.B6, N.E7, N.G7].forEach((f, i) => bell(f, 0.16 + i * 0.05, 1.4, 0.16));
+      tone({ f: 90, f2: 30, at: 0.16, d: 0.8, g: 0.9 });
+      noise({ ft: 'highpass', f: 5000, at: 0.16, a: 0.05, d: 1.2, g: 0.08 });
+    },
+    freeze() {
+      tone({ f: 200, f2: 35, d: 0.5, g: 0.8 });               // 電源が落ちるような下降音
+      noise({ ft: 'lowpass', f: 2500, f2: 80, d: 0.45, g: 0.4 });
+      tone({ f: 58, f2: 36, at: 0.75, d: 0.14, g: 0.85 });     // 暗闇の鼓動
+      tone({ f: 54, f2: 34, at: 0.95, d: 0.14, g: 0.55 });
+    },
+    revive() {
+      noise({ f: 200, f2: 6000, q: 1.2, a: 0.3, d: 0.05, g: 0.35 });
+      tone({ type: 'sawtooth', f: 90, f2: 900, a: 0.3, d: 0.05, g: 0.14, lp: 3000 });
+      tone({ f: 85, f2: 28, at: 0.32, d: 0.9, g: 1.0 });
+      clang(0.32, 0.1, 1.2);
+      [N.G5, N.C6, N.E6, N.G6, N.C7].forEach((f, i) => bell(f, 0.36 + i * 0.06, 1.0, 0.17));
     },
     impact() {
       tone({ f: 85, f2: 26, d: 1.1, g: 1.0 });
