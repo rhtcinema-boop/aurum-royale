@@ -6,7 +6,7 @@ const FX = (function () {
   let cv, ctx, raf = 0, last = 0, ambient = 0, ambAcc = 0;
   let parts = [], rings = [], lines = [], bolts = [];
   const sprites = {};
-  const COLORS = { gold: [255, 205, 96], white: [255, 246, 220], silver: [214, 226, 240], red: [255, 80, 70] };
+  const COLORS = { gold: [255, 205, 96], white: [255, 246, 220], silver: [214, 226, 240], red: [255, 80, 70], blue: [70, 140, 255], cyan: [120, 225, 255], violet: [185, 120, 255], orange: [255, 150, 50], yellow: [255, 235, 80], green: [90, 240, 120] };
 
   function sprite(name) {
     if (sprites[name]) return sprites[name];
