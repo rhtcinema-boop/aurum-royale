@@ -254,6 +254,7 @@ const Sfx = (function () {
       [0, 7, 12, 19].slice(0, stage + 1).forEach((iv, i) => chime(hz(ROOT[stage] + 12 + iv), i * 0.07, 0.4, 0.08, { pan: -0.5 + i * 0.3 }));
     },
     stop() {
+      [0, 4, 7, 12].forEach((iv, i) => tone({ type: 'square', f: hz(ROOT[stage] + 24 + iv), at: 0.02 + i * 0.045, d: i === 3 ? 0.3 : 0.06, g: 0.08, lp: 5200, pan: -0.3 + i * 0.2, rev: i === 3 ? 0.4 : 0 }));
       if (stage === 1) {
         sub(0, 0.2, 0.9); noise({ ft: 'lowpass', f: 1400, d: 0.08, g: 0.55 });
         bell(hz(79), 0.01, 0.5, 0.1);
@@ -516,22 +517,28 @@ const Sfx = (function () {
     try { SOUNDS[name](arg); } catch (e) { console.warn('sfx:' + name, e); /* 音の失敗でゲーム進行を止めない */ }
   }
 
-  /* リール通過音。speed は 0..1（1=最高速）。
-     高速時は機械的なクリック、減速するとステージの音階を1音ずつ上がるオルゴールになる。 */
+  /* リール回転音。speed は 0..1（1=最高速）。
+     アイテムルーレット風: コマが通過するたびに、ステージの音階からランダムな高さの「ピコ」音を鳴らす。
+     高速時は連打、減速するとコマ送りに合わせて間隔が開いていき、1音ずつが長く・はっきりする。 */
+  let lastNote = -1;
   function tick(speed) {
     if (!ready()) return;
     const now = ctx.currentTime;
-    if (now - lastTick < 0.034) return;
+    if (now - lastTick < 0.058) return;
     lastTick = now;
     const slow = 1 - Math.min(1, speed * 3);
-    const pan = tickN % 2 ? 0.25 : -0.25;
-    noise({ f: 2400 - slow * 900, q: 2.5, d: 0.016 + slow * 0.02, g: 0.1 + slow * 0.12, pan });
-    if (slow > 0.2) {
-      const sc = SCALES[stage];
-      tone({ type: 'triangle', f: 620 + slow * 160, d: 0.03 + slow * 0.03, g: 0.06 + slow * 0.12, pan });
-      chime(hz(sc[tickN % sc.length]), 0, 0.35 + slow * 0.4, 0.05 + slow * 0.1, { pan: -pan * 2 });
-      tickN++;
-    }
+    const sc = SCALES[stage];
+    let n;
+    do n = Math.floor(Math.random() * sc.length); while (n === lastNote); // 同じ音を続けない
+    lastNote = n;
+    const f = hz(sc[n] - (tickN % 3 === 0 ? 12 : 0));
+    const pan = tickN % 2 ? 0.3 : -0.3;
+    tickN++;
+    // 矩形波のピコピコ音（8bit風）＋ごく短いクリック
+    tone({ type: 'square', f, d: 0.05 + slow * 0.09, g: 0.075 + slow * 0.04, lp: 5200, pan });
+    tone({ type: 'triangle', f: f * 2, d: 0.04 + slow * 0.06, g: 0.05, pan: -pan });
+    noise({ f: 2600, q: 2.5, d: 0.012, g: 0.05, pan });
+    if (slow > 0.5) chime(f, 0, 0.3 + slow * 0.3, 0.04 + slow * 0.06, { pan: -pan }); // 止まり際は余韻を足す
   }
 
   /* 回転音（ループ）: ノイズ＋ステージごとに高さの違うモーター音。speed 0 で停止。 */
@@ -553,9 +560,9 @@ const Sfx = (function () {
       spinNodes = { src, bp, ng, o1, o2, lp, og };
     }
     const t = ctx.currentTime, n = spinNodes, base = hz(ROOT[stage] - 24);
-    n.ng.gain.setTargetAtTime(0.18 * speed, t, 0.05);
+    n.ng.gain.setTargetAtTime(0.07 * speed, t, 0.05); // ルーレット音を主役にするため控えめ
     n.bp.frequency.setTargetAtTime(350 + 2300 * speed, t, 0.05);
-    n.og.gain.setTargetAtTime(0.09 * speed, t, 0.05);
+    n.og.gain.setTargetAtTime(0.04 * speed, t, 0.05);
     n.o1.frequency.setTargetAtTime(base * (0.6 + 1.4 * speed), t, 0.06);
     n.o2.frequency.setTargetAtTime(base * (0.6 + 1.4 * speed) * (stage === 3 ? 1.498 : 1.006), t, 0.06);
     n.lp.frequency.setTargetAtTime(300 + 1400 * speed, t, 0.06);
