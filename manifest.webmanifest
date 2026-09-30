@@ -1,11 +1,11 @@
 {
-  "name": "AURUM ROYALE",
-  "short_name": "AURUM",
+  "name": "casa SLOT",
+  "short_name": "casa SLOT",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#050506",
   "theme_color": "#050506",
-  "icons": [{ "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }, { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }, { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [{ "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }, { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }]
 }
