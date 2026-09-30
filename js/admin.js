@@ -372,7 +372,7 @@ const Admin = (function () {
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'aurum-royale-history-' + fmtDate(Date.now()).replace(/[/: ]/g, '') + '.csv';
+    a.download = 'casa-slot-history-' + fmtDate(Date.now()).replace(/[/: ]/g, '') + '.csv';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }
